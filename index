@@ -234,7 +234,7 @@ function cnpCheck(v){v=(v||'').replace(/\s/g,'');if(!/^[1-8]\d{12}$/.test(v))ret
 
 /* ================= state ================= */
 let ITEMS=[];let FILTER='all';const OPEN=new Set();
-function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},cmp:{},lang:'da'}}
+function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],tests:{},supp:'',spec:{},c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},cmp:{},lang:'da'}}
 
 /* ================= PDF/billede ================= */
 const docCache=new Map();
@@ -313,13 +313,17 @@ const PROMPT=`You are reading a welder qualification certificate (ISO 9606-1 or 
 {"issuer":string|null,"issuerEmail":string|null,"certNo":string|null,"fileNo":string|null,"name":string|null,"employer":string|null,"dob":"YYYY-MM-DD"|null,"idNo":string|null,"standard":string|null,"designation":string|null,"testDate":"YYYY-MM-DD"|null,"issueDate":"YYYY-MM-DD"|null,"method":"a"|"b"|"c"|null,"validTo":"YYYY-MM-DD"|null,"examiner":string|null,"restrictions":string|null,"verifyUrl":string|null,
 "confirmations":[{"date":"YYYY-MM-DD"|null,"name":string|null,"title":string|null}],
 "revalidations":[{"date":"YYYY-MM-DD"|null,"validUntil":"YYYY-MM-DD"|null,"body":string|null}],
+"tests":{"vt":T,"rt":T,"ut":T,"mt":T,"pt":T,"macro":T,"fracture":T,"bend":T,"nt":T},"supplementaryFillet":true|false|null,
 "anomalies":[string]}
+where T is {"performed":true|false,"report":string|null,"date":"YYYY-MM-DD"|null}
 Rules:
 - testDate is the test date or "validity begins from" date. issueDate is the date next to the examiner's signature.
 - method is the ISO 9606-1 clause 9.3 revalidation method used (a = retest every 3 years, b = verification every 2 years, c = continuous). If "valid until" refers to 9.3a use "a". null if unclear.
 - confirmations: every row in the employer/supervisor 6-month confirmation table (clause 9.2) that contains a date, name or signature, in the order written. Use null for parts you cannot read. Do not include empty rows.
 - revalidations: filled rows in the examiner/examining body revalidation tables.
 - restrictions: any limitation of use written on the certificate, e.g. "for shipbuilding, offshore and marine equipment only".
+- tests: vt visual, rt radiography, ut ultrasonic, mt magnetic particle, pt penetrant, macro, fracture, bend, nt notched tensile test. performed is true only if the "performed and acceptable" column contains a date or report reference for that test. A dash, an empty cell or a mark in the "not required" column means performed=false. report is the report number, e.g. "CSD Rep. No. 331"; date is the report date.
+- supplementaryFillet: the supplementary fillet weld test box (yes/no).
 - anomalies: short English descriptions of visual signs that the document may have been altered: a field in a different font, size or weight than similar fields, text not aligned with the form, remains of erased text, white patches, stamps or signatures that look pasted, identical-looking 6-month signatures. Empty list if nothing is visible. Do not speculate.
 - Dates must be YYYY-MM-DD. Never guess values that are not written on the certificate.`;
 const AIQ=[];let aiRunning=0;
@@ -340,12 +344,67 @@ async function aiRead(id){
     FIELDS.forEach(([k,,t])=>{const v=j[k];if(v==null||v==='')return;if(it.f[k])return;it.f[k]=t==='date'?normDate(v):String(v)});
     if(j.method&&!it.f.method&&/^[abc]$/.test(j.method))it.f.method=j.method;
     if(Array.isArray(j.confirmations)&&!it.conf.length)it.conf=j.confirmations.map(c=>({date:normDate(c.date),name:c.name||'',title:c.title||'',ai:true}));
+    if(j.tests&&typeof j.tests==='object'&&!TESTS.some(([k])=>it.tests[k]&&it.tests[k].done))TESTS.forEach(([k])=>{const x=j.tests[k];if(x&&x.performed)it.tests[k]={done:true,report:x.report||'',date:normDate(x.date)}});
+    if(!it.supp&&typeof j.supplementaryFillet==='boolean')it.supp=j.supplementaryFillet?'yes':'no';
     if(Array.isArray(j.revalidations)&&!it.reval.length)it.reval=j.revalidations.map(c=>({date:normDate(c.date),validUntil:normDate(c.validUntil),body:c.body||'',ai:true}));
     it.ai={status:'done',anomalies:Array.isArray(j.anomalies)?j.anomalies.filter(Boolean):[],error:'',at:new Date().toISOString()};
   }catch(e){console.error(e);it.ai.status='error';it.ai.error=String(e.message||e)}
   save(it);renderList();
 }
 $('btnAiAll').onclick=()=>{const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst.');return}todo.forEach(x=>aiQueue(x.id))};
+
+/* ================= prøvning (ISO 9606-1, 6.4) ================= */
+const TESTS=[['vt','Visuel kontrol (VT)','visual testing'],['rt','Radiografi (RT)','radiography'],['ut','Ultralyd (UT)','ultrasonic testing'],['bend','Bøjeprøve','bend test'],['fracture','Brudprøve','fracture test'],['macro','Makro','macro examination'],['nt','Kærvtrækprøve af helt rør','notched tensile test'],['mt','Magnetpulver (MT)','magnetic particle testing'],['pt','Penetrant (PT)','penetrant testing']];
+const TN=k=>(TESTS.find(t=>t[0]===k)||[k,k,k]);
+const num=v=>{const n=parseFloat(String(v??'').replace(',','.'));return isFinite(n)?n:null};
+function parseDesig(s){s=s||'';const o={};
+  const w=s.match(/\b(BW|FW)\b/);if(w)o.wt=w[1];
+  const pr=s.match(/\b(\d{3}(?:\/\d{3})*)\b/);if(pr)o.proc=pr[1];
+  const t=s.match(/\bt\s?(\d+(?:[.,]\d+)?)/);if(t)o.t=num(t[1]);
+  const d=s.match(/\bD\s?(\d+(?:[.,]\d+)?)/);if(d)o.D=num(d[1]);
+  const fm=[...s.matchAll(/FM(\d)/g)].map(m=>'FM'+m[1]);if(fm.length)o.fm=[...new Set(fm)].join('/');
+  const pt=s.match(/\b([PT])\s+(BW|FW)\b/);if(pt)o.prod=pt[1];
+  return o}
+function specOf(it){const p=parseDesig(it.f.designation),s=it.spec||{};return{wt:s.wt||p.wt||'',proc:s.proc||p.proc||'',t:num(s.t)??p.t??null,D:num(s.D)??p.D??null,fm:s.fm||p.fm||'',prod:p.prod||''}}
+function testRules(it){
+  const R=[],T=it.tests||{},has=k=>!!(T[k]&&T[k].done),sp=specOf(it);
+  const P=(lvl,t,en,x={})=>R.push({lvl,t:'Prøvning: '+t,en:'Testing: '+en,...x});
+  const any=TESTS.some(([k])=>has(k));
+  if(!any){P('warn','Der er ikke registreret nogen prøvninger.','no tests have been recorded.');return{R,ok:null,sp}}
+  if(!sp.wt){P('warn','Sømtypen (BW eller FW) kendes ikke, så prøvningen kan ikke vurderes.','the weld type (BW or FW) is unknown, so the testing cannot be assessed.');return{R,ok:null,sp}}
+  const procs=sp.proc.split('/').filter(Boolean);
+  const fms=(sp.fm.match(/\d/g)||[]).map(Number);
+  const ferritic=fms.length?fms.every(n=>n>=1&&n<=4):null;
+  if(!has('vt'))P('bad','Visuel kontrol mangler. Den er altid påkrævet.','visual testing is missing. It is always required.');
+  if(sp.wt==='BW'){
+    let utOK=false;
+    if(has('ut')){
+      if(sp.t!=null&&sp.t>=8&&ferritic===true)utOK=true;
+      else if(sp.t==null||ferritic===null)P('warn','Ultralyd må kun erstatte radiografi ved t ≥ 8 mm i ferritisk stål. Tykkelse eller FM-gruppe kendes ikke.','ultrasonic testing may only replace radiography for t ≥ 8 mm in ferritic steel. Thickness or FM group is unknown.');
+      else P('bad',`Ultralyd må kun erstatte radiografi ved t ≥ 8 mm i ferritisk stål. Her er t = ${sp.t} mm og ${sp.fm}.`,`ultrasonic testing may only replace radiography for t ≥ 8 mm in ferritic steel. Here t = ${sp.t} mm and ${sp.fm}.`)}
+    const vol=has('rt')||utOK;
+    const ntOK=has('nt')&&sp.D!=null&&sp.D<=25;
+    if(has('nt')&&!ntOK)P('bad','Kærvtrækprøve af helt rør kan kun erstatte bøje- eller brudprøve ved D ≤ 25 mm.','a notched tensile test of the complete pipe can only replace bend or fracture tests for D ≤ 25 mm.');
+    const destr=has('bend')||has('fracture')||ntOK;
+    if(!vol&&!destr)P('bad','Stumpsømmen er ikke prøvet med radiografi (eller ultralyd), bøjeprøve eller brudprøve. Én af dem er påkrævet.','the butt weld has not been tested by radiography (or ultrasonic), bend or fracture test. One of them is required.');
+    const needD=procs.filter(x=>['131','135','138','311'].includes(x));
+    if(vol&&!destr&&needD.length)P('bad',`Ved proces ${needD.join(', ')} skal radiografi eller ultralyd suppleres med bøje- eller brudprøve.`,`for process ${needD.join(', ')} radiography or ultrasonic testing must be supplemented by bend or fracture tests.`);
+    if(has('macro')&&!vol&&!destr)P('bad','Makro alene er ikke nok til en stumpsøm.','a macro examination alone is not sufficient for a butt weld.');
+    if(it.supp==='yes'&&!(has('fracture')||has('macro')))P('bad','Der er lavet supplerende kantsømsprøve, men hverken brudprøve eller makro er registreret for den.','a supplementary fillet weld test is stated, but no fracture test or macro examination is recorded for it.');
+    if(vol&&destr)P('ok',`Stumpsømmen er prøvet med ${[has('rt')&&'radiografi',utOK&&'ultralyd'].filter(Boolean).join(' og ')} samt ${[has('bend')&&'bøjeprøve',has('fracture')&&'brudprøve',ntOK&&'kærvtrækprøve'].filter(Boolean).join(' og ')}.`,`the butt weld is tested by ${[has('rt')&&'radiography',utOK&&'ultrasonic testing'].filter(Boolean).join(' and ')} as well as ${[has('bend')&&'bend test',has('fracture')&&'fracture test',ntOK&&'notched tensile test'].filter(Boolean).join(' and ')}.`);
+    else if(destr||vol&&!needD.length)P('ok','Stumpsømmen har den krævede volumetriske eller destruktive prøvning.','the butt weld has the required volumetric or destructive testing.');
+  } else {
+    if(!(has('fracture')||has('macro')))P('bad','Kantsømmen skal prøves med brudprøve eller makro (mindst to snit). Ingen af dem er registreret.','the fillet weld must be tested by fracture test or macro examination (at least two sections). Neither is recorded.');
+    else P('ok',`Kantsømmen er prøvet med ${[has('fracture')&&'brudprøve',has('macro')&&'makro'].filter(Boolean).join(' og ')}. Kontrollér antal snit.`,`the fillet weld is tested by ${[has('fracture')&&'fracture test',has('macro')&&'macro examination'].filter(Boolean).join(' and ')}. Check the number of sections.`);
+  }
+  // rapporter og datoer
+  const start=D(it.f.testDate),iss=D(it.f.issueDate);
+  TESTS.forEach(([k,l,en])=>{if(!has(k))return;const x=T[k],dd=D(x.date);
+    if(k!=='vt'&&!x.report)P('warn',`${l} har intet rapportnummer.`,`${en} has no report number.`);
+    if(dd&&start&&dd<start)P('bad',`${l} er dateret ${fmt(dd)}, før prøvedatoen.`,`${en} is dated ${iso(dd)}, before the test date.`,{fraud:true});
+    if(dd&&iss&&dd>iss)P('bad',`${l} er dateret ${fmt(dd)}, efter certifikatet blev udstedt.`,`${en} is dated ${iso(dd)}, after the certificate was issued.`,{fraud:true})});
+  return{R,ok:!R.some(r=>r.lvl==='bad'),sp};
+}
 
 /* ================= vurdering ================= */
 function crossAlerts(it){
@@ -402,18 +461,20 @@ function evaluate(it){
   it.metaFlags.forEach(m=>A.push(m));
   it.ai.anomalies.forEach(a=>A.push({lvl:'warn',fraud:true,t:`AI-bemærkning: ${a}`,en:`AI observation: ${a}`}));
   CHECKS.filter(g=>g.flag).flatMap(g=>g.items).forEach(([id,t])=>{if(it.c[id])A.push({lvl:'bad',fraud:true,t:`Observeret: ${t}.`,en:`Observed: ${EN_FLAG[id]}.`})});
+  const TR=testRules(it);TR.R.forEach(a=>A.push(a));
   crossAlerts(it).forEach(a=>A.push(a));
   const fraud=A.filter(a=>a.fraud&&a.lvl!=='ok');
   const req=CHECKS.filter(g=>!g.flag).flatMap(g=>g.items.map(i=>i[0]));const done=req.filter(id=>it.c[id]).length;
   let cls,big,en,sub='';
   if(it.cf.no){cls='bad';big='Afvist af udsteder';en='Rejected by the issuer'}
   else if(fraud.length&&!it.cf.ok){cls='bad';big='Mulig forfalskning';en='Possibly forged or altered'}
-  else if(!start){cls='warn';big='Mangler data';en='Insufficient data'}
-  else if(blocking){cls='bad';big='Ikke gyldigt';en='Not valid'}
+  else if(start&&blocking){cls='bad';big='Ikke gyldigt';en='Not valid'}
+  else if(TR.ok===false){cls='bad';big='Utilstrækkelig prøvning';en='Insufficient testing'}
+  else if(!start||TR.ok===null){cls='warn';big='Mangler data';en='Insufficient data'}
   else{cls='ok';big=it.cf.ok?'Gyldigt, bekræftet':'Gyldigt';en=it.cf.ok?'Valid, confirmed by the issuer':'Valid'}
   if(it.ai.status==='running')sub='Aflæses med AI …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ai.status==='error')sub='AI-fejl';
-  else if(cls!=='bad'||big==='Ikke gyldigt')sub=`Tjekliste ${done}/${req.length}`;
-  return{A,cls,big,en,sub,sig,fraud,done,req:req.length};
+  else if(cls!=='bad'||big==='Ikke gyldigt'||big==='Utilstrækkelig prøvning')sub=`Tjekliste ${done}/${req.length}`;
+  return{A,cls,big,en,sub,sig,fraud,done,req:req.length,TR};
 }
 const iso=d=>d?new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10):'';
 const EN_FLAG={f1:'a field has a different font, size or position',f2:'remains of erased text, white patches or smudges',f3:'a stamp, seal or signature appears copied or pasted',f4:'the 6-month signatures look identical or made at the same time'};
@@ -426,7 +487,7 @@ function statement(it,lang){
   const intro=L(
     `Certifikat ${esc(f.certNo||'uden nummer')}${f.standard?' efter '+esc(f.standard):''}${f.issuer?', udstedt af '+esc(f.issuer):''}${f.issueDate?' den '+fmt(f.issueDate):''}, til ${esc(who)}. Arbejdsgiver på certifikatet: ${esc(f.employer||'ikke angivet')}.${f.designation?' Betegnelse: '+esc(f.designation)+'.':''}`,
     `Certificate ${esc(f.certNo||'without number')}${f.standard?' to '+esc(f.standard):''}${f.issuer?', issued by '+esc(f.issuer):''}${f.issueDate?' on '+f.issueDate:''}, for ${esc(who)}. Employer stated on the certificate: ${esc(f.employer||'not stated')}.${f.designation?' Designation: '+esc(f.designation)+'.':''}`);
-  const conclTxt={bad:{'Mulig forfalskning':L('Konklusion: Certifikatet er muligvis forfalsket eller ændret. Det må ikke anvendes, før udstederen har bekræftet det.','Conclusion: The certificate is possibly forged or altered. It must not be used until the issuer has confirmed it.'),'Afvist af udsteder':L('Konklusion: Udstederen har ikke kunnet bekræfte certifikatet. Det må ikke anvendes.','Conclusion: The issuer could not confirm the certificate. It must not be used.'),'Ikke gyldigt':L('Konklusion: Certifikatet er ikke gyldigt i dag.','Conclusion: The certificate is not valid today.')},
+  const conclTxt={bad:{'Mulig forfalskning':L('Konklusion: Certifikatet er muligvis forfalsket eller ændret. Det må ikke anvendes, før udstederen har bekræftet det.','Conclusion: The certificate is possibly forged or altered. It must not be used until the issuer has confirmed it.'),'Afvist af udsteder':L('Konklusion: Udstederen har ikke kunnet bekræfte certifikatet. Det må ikke anvendes.','Conclusion: The issuer could not confirm the certificate. It must not be used.'),'Ikke gyldigt':L('Konklusion: Certifikatet er ikke gyldigt i dag.','Conclusion: The certificate is not valid today.'),'Utilstrækkelig prøvning':L('Konklusion: De registrerede prøvninger opfylder ikke kravene i ISO 9606-1, afsnit 6.4. Certifikatet kan ikke godkendes.','Conclusion: The recorded tests do not meet the requirements of ISO 9606-1, clause 6.4. The certificate cannot be accepted.')},
     ok:L(`Konklusion: Certifikatet er gyldigt i dag${it.cf.ok?' og bekræftet af udstederen':''}.`,`Conclusion: The certificate is valid today${it.cf.ok?' and confirmed by the issuer':''}.`),
     warn:L('Konklusion: Der mangler oplysninger til at vurdere certifikatet.','Conclusion: Information is missing to assess the certificate.')};
   const concl=v.cls==='bad'?conclTxt.bad[v.big]:conclTxt[v.cls];
@@ -437,6 +498,7 @@ function statement(it,lang){
   const crops=v.A.filter(a=>a.crops).flatMap(a=>a.crops);
   let rec;
   if(v.cls==='bad'&&(v.big==='Mulig forfalskning'))rec=L(`Kontakt ${esc(f.issuer||'udstederen')} og få bekræftet certifikatets ægthed og indhold, især arbejdsgiveren. Brug kontaktoplysninger fra udstederens officielle hjemmeside. Svejseren må ikke svejse på certifikatet, før det er bekræftet.`,`Contact ${esc(f.issuer||'the issuer')} to confirm the authenticity and content of the certificate, in particular the employer. Use contact details from the issuer's official website. The welder must not weld under this certificate until it is confirmed.`);
+  else if(v.big==='Utilstrækkelig prøvning')rec=L('Få dokumentation for de manglende prøvninger fra udstederen, eller lad svejseren tage en ny prøve.','Obtain documentation of the missing tests from the issuer, or have the welder take a new test.');
   else if(v.big==='Ikke gyldigt')rec=L('Svejseren skal have certifikatet forlænget eller tage en ny prøve, før der svejses på det.','The welder must have the certificate revalidated or take a new test before welding under it.');
   else if(v.cls==='ok')rec=L(`Næste 6-måneders bekræftelse skal underskrives senest ${fmt(s.nextDue)}. Kontrollér at gyldighedsområdet dækker opgaven.`,`The next 6-month confirmation must be signed by ${iso(s.nextDue)}. Check that the range of qualification covers the work.`);
   else rec=L('Udfyld de manglende oplysninger, eller aflæs certifikatet med AI.','Complete the missing information or read the certificate with AI.');
@@ -445,6 +507,7 @@ function statement(it,lang){
   <p>${intro}</p>
   <div class="concl ${v.cls}">${concl}</div>
   <p>${val}${conf}</p>
+  ${testsLine(it,da)}
   ${find.length?`<p><b>${L('Fund','Findings')}</b></p><ul>${find.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
   ${okf.length?`<p><b>${L('Kontrolleret uden bemærkninger','Checked without remarks')}</b></p><ul>${okf.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
   ${crops.map(c=>`<figure style="margin:6px 0"><figcaption style="font-size:12px">${esc(da?c.cap:c.capEn)}</figcaption><img src="${c.a}"><img src="${c.b}"></figure>`).join('')}
@@ -453,6 +516,10 @@ function statement(it,lang){
   ${it.notes?`<p>${esc(it.notes)}</p>`:''}
   <p style="font-size:12px;color:#555">${L('Kontrolleret','Checked')} ${da?fmt(today()):today()}${by?` ${L('af','by')} ${esc(by)}`:''}. ${L('Fil','File')}: ${esc(it.file.name)}, SHA-256 ${esc(it.file.hash.slice(0,16))}…</p>`};
 }
+
+function testsLine(it,da){const T=it.tests||{};const done=TESTS.filter(([k])=>T[k]&&T[k].done);if(!done.length)return'';
+  const sp=specOf(it);
+  return `<p>${da?'Prøvninger':'Tests'}${sp.wt?` (${sp.wt}${sp.t!=null?', t '+sp.t+' mm':''}${sp.proc?', '+(da?'proces ':'process ')+esc(sp.proc):''})`:''}: ${done.map(([k,l,en])=>`${da?l:en}${T[k].report?' '+esc(T[k].report):''}${T[k].date?' ('+(da?fmt(T[k].date):T[k].date)+')':''}`).join(', ')}${it.supp==='yes'?(da?'. Supplerende kantsømsprøve udført':'. Supplementary fillet weld test performed'):''}.</p>`}
 
 /* ================= billedsammenligning ================= */
 function mask(c,th=140){const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data,m=new Uint8Array(w*h);for(let i=0,j=0;i<m.length;i++,j+=4)m[i]=(d[j]*.3+d[j+1]*.59+d[j+2]*.11)<th?1:0;return{w,h,m}}
@@ -540,7 +607,8 @@ function renderItem(it){
 function refresh(it){ITEMS.forEach(o=>{if(o===it||OPEN.has(o.id))refreshOne(o);else renderHead(o)})}
 function refreshOne(it){renderHead(it);const b=$('it_'+it.id);if(!b)return;const v=evaluate(it);
   const st=b.querySelector('[data-stmt]');if(st){const s=statement(it,it.lang);st.innerHTML=s.html}
-  const al=b.querySelector('[data-alerts]');if(al)al.innerHTML=alertsHTML(v)}
+  const al=b.querySelector('[data-alerts]');if(al)al.innerHTML=alertsHTML(v);
+  const tr=b.querySelector('[data-testres]');if(tr)tr.innerHTML=v.TR.R.map(a=>`<div class="al ${a.lvl}">${esc(a.t.replace(/^Prøvning: /,''))}</div>`).join('')}
 function alertsHTML(v){return v.A.map(a=>`<div class="al ${a.lvl}">${esc(a.t)}</div>`).join('')||'<div class="hint">Ingen automatiske fund endnu.</div>'}
 
 function bodyEl(it){
@@ -569,6 +637,14 @@ function bodyEl(it){
       ${it.ai.status==='error'?`<div class="al bad" style="margin:8px 0">AI-aflæsningen fejlede: ${esc(it.ai.error)}</div>`:''}
       ${it.ai.status==='done'?'<p class="hint">Aflæst med AI. Kontrollér værdierne mod certifikatet, især håndskrevne datoer.</p>':''}
       <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}"></label>`).join('')}</div>
+    </div>
+    <div class="box"><h3>Prøvning (ISO 9606-1, afsnit 6.4)</h3>
+      <p class="hint" style="margin-top:0">Sømtype, proces, tykkelse, diameter og FM-gruppe læses fra betegnelsen. Skriv kun her, hvis de skal rettes.</p>
+      <div class="fields" data-spec></div>
+      <table class="sg" style="margin-top:10px"><thead><tr><th>Prøvning</th><th>Udført</th><th>Rapport-nr.</th><th>Dato</th></tr></thead><tbody data-tests></tbody></table>
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:8px">Supplerende kantsømsprøve <select data-supp style="width:auto"><option value="">Ukendt</option><option value="yes">Ja</option><option value="no">Nej</option></select></label>
+      <div class="alerts" data-testres style="margin-top:8px"></div>
+      <p class="hint">Reglerne følger ISO 9606-1:2017, afsnit 6.4. Antal og placering af bøje- og brudprøver kontrolleres manuelt.</p>
     </div>
     <div class="box"><h3>6-måneders underskrifter (§9.2)</h3>
       <p class="hint" style="margin-top:0">Arbejdsgiveren eller svejsekoordinatoren skal bekræfte hver 6. måned. Der må ikke gå mere end 6 måneder fra gyldig-fra-datoen eller den seneste underskrift.</p>
@@ -603,6 +679,13 @@ function bodyEl(it){
     tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{it[key].splice(+b.dataset.rm,1);save(it);rows(key,cols,tb);refresh(it)})};
   const cc=[['date','date'],['name','text'],['title','text']],rc=[['date','date'],['validUntil','date'],['body','text']];
   rows('conf',cc,q('[data-conf]'));rows('reval',rc,q('[data-reval]'));
+  const pd=parseDesig(it.f.designation);
+  q('[data-spec]').innerHTML=[['wt','Sømtype'],['proc','Proces(ser)'],['t','Tykkelse t (mm)'],['D','Diameter D (mm)'],['fm','FM-gruppe']].map(([k,l])=>k==='wt'?`<label>${l}<select data-sp="wt"><option value="">Fra betegnelse${pd.wt?' ('+pd.wt+')':''}</option><option>BW</option><option>FW</option></select></label>`:`<label>${l}<input data-sp="${k}" placeholder="${esc(pd[k]!=null?'Fra betegnelse: '+pd[k]:'')}"></label>`).join('');
+  qa('[data-sp]').forEach(el=>{el.value=it.spec[el.dataset.sp]||'';el.oninput=()=>{it.spec[el.dataset.sp]=el.value;save(it);refresh(it)}});
+  q('[data-tests]').innerHTML=TESTS.map(([k,l])=>{const x=it.tests[k]||{};return `<tr><td>${l}</td><td><input type="checkbox" data-tk="${k}" data-tf="done" ${x.done?'checked':''} style="width:17px;height:17px;accent-color:var(--lime)"></td><td><input data-tk="${k}" data-tf="report" value="${esc(x.report||'')}"></td><td><input type="date" data-tk="${k}" data-tf="date" value="${esc(x.date||'')}"></td></tr>`}).join('');
+  qa('[data-tk]').forEach(el=>el.oninput=()=>{const k=el.dataset.tk;it.tests[k]=it.tests[k]||{};it.tests[k][el.dataset.tf]=el.type==='checkbox'?el.checked:el.value;if(el.dataset.tf!=='done'&&el.value)it.tests[k].done=true;save(it);refresh(it);if(el.dataset.tf!=='done')q(`[data-tk="${k}"][data-tf="done"]`).checked=!!it.tests[k].done});
+  q('[data-testres]').innerHTML=evaluate(it).TR.R.map(a=>`<div class="al ${a.lvl}">${esc(a.t.replace(/^Prøvning: /,''))}</div>`).join('');
+  q('[data-supp]').value=it.supp||'';q('[data-supp]').onchange=e=>{it.supp=e.target.value;save(it);refresh(it)};
   q('[data-addconf]').onclick=()=>{it.conf.push({date:'',name:'',title:''});save(it);rows('conf',cc,q('[data-conf]'));refresh(it)};
   q('[data-addreval]').onclick=()=>{it.reval.push({date:'',validUntil:'',body:''});save(it);rows('reval',rc,q('[data-reval]'));refresh(it)};
   qa('[data-lang]').forEach(b=>b.onclick=()=>{it.lang=b.dataset.lang;save(it);qa('[data-lang]').forEach(x=>x.classList.toggle('on',x===b));refresh(it)});
@@ -649,9 +732,9 @@ $('btnPrintAll').onclick=()=>{const q=norm($('q').value);printStatements(ITEMS.f
   if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
   return FILTER==='all'||(FILTER==='fraud'&&isF)||(FILTER==='bad'&&v.cls==='bad'&&!isF)||(FILTER==='ok'&&v.cls==='ok')||(FILTER==='warn'&&v.cls==='warn')}))};
 $('btnCsv').onclick=()=>{
-  const cols=['Resultat','Svejser','Fødselsdato','Cert.-nr.','Udsteder','Arbejdsgiver','Betegnelse','Gyldig fra','Gyldig til','Seneste underskrift','Næste underskrift senest','Antal underskrifter','Fund','Fil'];
+  const cols=['Resultat','Svejser','Fødselsdato','Cert.-nr.','Udsteder','Arbejdsgiver','Betegnelse','Gyldig fra','Gyldig til','Seneste underskrift','Næste underskrift senest','Antal underskrifter','Prøvninger','Fund','Fil'];
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
-  const lines=ITEMS.map(it=>{const v=evaluate(it),s=v.sig;return[v.big,it.f.name,it.f.dob,it.f.certNo,it.f.issuer,it.f.employer,it.f.designation,it.f.testDate,s.end?iso(s.end):'',s.last?iso(s.last):'',s.nextDue?iso(s.nextDue):'',it.conf.length,v.A.filter(a=>a.lvl!=='ok').map(a=>a.t).join(' | '),it.file.name].map(q).join(';')});
+  const lines=ITEMS.map(it=>{const v=evaluate(it),s=v.sig;return[v.big,it.f.name,it.f.dob,it.f.certNo,it.f.issuer,it.f.employer,it.f.designation,it.f.testDate,s.end?iso(s.end):'',s.last?iso(s.last):'',s.nextDue?iso(s.nextDue):'',it.conf.length,TESTS.filter(([k])=>it.tests&&it.tests[k]&&it.tests[k].done).map(t=>t[1]).join(', '),v.A.filter(a=>a.lvl!=='ok').map(a=>a.t).join(' | '),it.file.name].map(q).join(';')});
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+[cols.map(q).join(';'),...lines].join('\r\n')],{type:'text/csv'}));a.download=`svejsercertifikater-${today()}.csv`;a.click();
 };
 $('btnBackup').onclick=async()=>{
@@ -671,7 +754,7 @@ $('fileRestore').onchange=async e=>{
 (async()=>{
   showAi();
   try{await dbOpen();ITEMS=(await dbAll()).sort((a,b)=>b.added.localeCompare(a.added))}catch(e){toast('Browseren tillader ikke lokal lagring. Listen gemmes ikke.')}
-  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
+  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
   renderList();
 })();
 </script>
