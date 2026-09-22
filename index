@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Verifikator 9606-1</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root{--bg:#12140f;--bg2:#1a1d16;--bg3:#232719;--line:#3a4130;--ink:#e8ecdf;--dim:#98a189;--teal:#2fb3a3;--lime:#c6f24e;--ok:#57c98a;--bad:#ff6b5e;--warn:#f5b942;--r:6px;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Archivo,system-ui,sans-serif;font-size:15px;line-height:1.45}
+input,select,textarea,.mono{font-family:'Space Mono',ui-monospace,monospace}
+a{color:var(--teal)} button{font:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--lime);outline-offset:2px}
+header{background:var(--bg2);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.hw{max-width:1400px;margin:0 auto;padding:10px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.logo{font-weight:800;font-size:18px;letter-spacing:-.02em}.logo b{color:var(--lime)}
+.hw .sp{margin-left:auto}
+main{max-width:1400px;margin:0 auto;padding:16px}
+.hint{color:var(--dim);font-size:13px}
+.btn{background:var(--bg);border:1px solid var(--line);color:var(--ink);padding:7px 12px;border-radius:4px;font-size:13px}
+.btn.pri{background:var(--lime);border-color:var(--lime);color:#15180f;font-weight:600}
+.btn.sm{padding:4px 8px;font-size:12px}
+.btn.del{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:7px 8px;font-size:13px;width:100%}
+
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:28px 16px;text-align:center;color:var(--dim);cursor:pointer;background:var(--bg2)}
+.drop strong{display:block;color:var(--ink);font-size:17px;margin-bottom:2px}
+.drop.over{border-color:var(--lime);background:var(--bg3)}
+#queue{margin-top:6px;min-height:20px}
+
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:16px 0 10px}
+.tools input[type=search]{max-width:280px}
+.tools select{width:auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;border:1px solid var(--line);border-radius:20px;padding:3px 10px;background:none;color:var(--dim)}
+.chip.on{color:var(--ink);border-color:var(--ink)}
+.chip b{font-family:'Space Mono',monospace;margin-left:4px}
+
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.it{border-bottom:1px solid var(--line);background:var(--bg2)}
+.it:last-child{border-bottom:none}
+.head{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 170px 24px;gap:12px;align-items:center;padding:8px 12px;width:100%;text-align:left;background:none;border:none;color:inherit}
+.head:hover{background:var(--bg3)}
+.head img{width:54px;height:72px;object-fit:cover;object-position:top;border-radius:2px;background:#fff}
+.head .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head .who span,.head .col span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.head .col{font-size:13px}
+.head .car{color:var(--dim);transition:transform .15s}
+.it.open .car{transform:rotate(90deg)}
+.lh{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 170px 24px;gap:12px;padding:6px 12px;font-size:12px;color:var(--dim);background:var(--bg3);border-bottom:1px solid var(--line)}
+@media (max-width:900px){.head{grid-template-columns:44px 1fr auto;}.head img{width:44px;height:58px}.head .col,.head .car,.lh{display:none}.head .stat{grid-column:2/4}}
+.tag{font-family:'Space Mono',monospace;font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--dim);white-space:nowrap;display:inline-block}
+.tag.ok{color:var(--ok);border-color:#2f6b49}.tag.bad{color:var(--bad);border-color:#7a3530}.tag.warn{color:var(--warn);border-color:#7a5d24}
+.stat small{display:block;font-size:11px;color:var(--dim);margin-top:2px}
+.empty{padding:30px;text-align:center;color:var(--dim)}
+
+.body{padding:14px;border-top:1px solid var(--line);background:var(--bg);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}
+@media (max-width:980px){.body{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);border-radius:var(--r);padding:12px;background:var(--bg2);margin-bottom:14px}
+.box h3{margin:0 0 8px;font-size:15px;font-weight:800}
+.box h4{margin:12px 0 6px;font-size:13px;color:var(--teal);font-weight:600}
+.pages{display:flex;flex-direction:column;gap:8px;max-height:80vh;overflow:auto}
+.pages canvas{width:100%;height:auto;background:#fff;border-radius:3px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--dim)}.kv dd{margin:0;font-family:'Space Mono',monospace;word-break:break-all}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.fields label{display:flex;flex-direction:column;font-size:12px;color:var(--dim);gap:3px}
+.fields .full{grid-column:1/-1}
+@media (max-width:520px){.fields{grid-template-columns:1fr}}
+.alerts{display:flex;flex-direction:column;gap:5px}
+.al{font-size:13px;padding:6px 10px;border-radius:4px;border-left:3px solid var(--line);background:var(--bg)}
+.al.bad{border-color:var(--bad)}.al.warn{border-color:var(--warn)}.al.ok{border-color:var(--ok)}
+table.sg{width:100%;border-collapse:collapse;font-size:13px}
+.sg th,.sg td{padding:3px 4px;text-align:left;border-bottom:1px solid #2a2f22}
+.sg th{color:var(--dim);font-weight:600;font-size:12px}
+.sg input{padding:4px 6px}
+.ck{display:flex;gap:10px;align-items:flex-start;padding:5px 2px;border-bottom:1px solid #2a2f22;font-size:14px}
+.ck input{width:17px;height:17px;margin-top:2px;flex:none;accent-color:var(--lime)}
+.ck.flag input{accent-color:var(--bad)}
+.ck small{display:block;color:var(--dim);font-size:12px}
+details.dd summary{cursor:pointer;font-weight:800;font-size:15px}
+.stmt{background:#f4f5f0;color:#16180f;border-radius:4px;padding:14px 16px;font-size:13.5px;line-height:1.5}
+.stmt h4{margin:0 0 6px;font-size:15px;color:#16180f}
+.stmt .concl{font-weight:800;font-size:15px;margin:8px 0}
+.stmt .concl.bad{color:#b3261e}.stmt .concl.ok{color:#1d6b3f}.stmt .concl.warn{color:#8a5a00}
+.stmt ul{margin:4px 0 8px;padding-left:18px}
+.stmt p{margin:6px 0}
+.stmt img{max-width:100%;border:1px solid #ccc;margin-top:4px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{background:none;border:none;color:var(--dim);padding:4px 10px;font-size:12px}
+.seg button.on{background:var(--bg3);color:var(--ink)}
+.crop figure{margin:6px 0 0}.crop figcaption{font-size:12px;color:var(--dim)}
+.crop img{width:100%;border-radius:3px;background:#fff}
+.hidden{display:none!important}
+
+dialog{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);max-width:520px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h2{margin:0 0 10px;font-size:18px}
+dialog label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--dim);margin-bottom:10px}
+footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);font-size:12px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line);padding:8px 14px;border-radius:4px;font-size:13px;z-index:50;display:none}
+
+#printArea{display:none}
+@media print{
+  body{background:#fff;color:#000;font-size:10.5pt}
+  header,main,footer,dialog,#toast{display:none!important}
+  #printArea{display:block}
+  #printArea .stmt{background:#fff;padding:0;page-break-after:always;font-size:10.5pt}
+  #printArea .stmt:last-child{page-break-after:auto}
+  #printArea .stmt img{max-width:60%}
+  #printArea table{width:100%;border-collapse:collapse;font-size:9pt}
+  #printArea td,#printArea th{border:1px solid #bbb;padding:3pt 5pt;text-align:left;vertical-align:top}
+}
+</style>
+</head>
+<body>
+<header><div class="hw">
+  <div class="logo">Verifikator <b>9606-1</b></div>
+  <span class="hint">Kontrol af svejsercertifikater</span>
+  <span class="sp"></span>
+  <span class="hint" id="aiState"></span>
+  <button class="btn" id="btnSettings">Indstillinger</button>
+</div></header>
+
+<main>
+  <div class="drop" id="drop" tabindex="0" role="button">
+    <strong>Træk certifikater hertil, eller klik for at vælge</strong>
+    Et eller flere på én gang. PDF, JPG eller PNG. Filerne bliver i din browser.
+  </div>
+  <input type="file" id="file" accept="application/pdf,image/*" multiple class="hidden">
+  <div id="queue" class="hint"></div>
+
+  <div class="tools">
+    <input type="search" id="q" placeholder="Søg navn, cert.-nr., arbejdsgiver">
+    <div class="chips" id="chips"></div>
+    <span class="sp" style="margin-left:auto"></span>
+    <button class="btn" id="btnAiAll">Aflæs alle med AI</button>
+    <button class="btn" id="btnPrintAll">Udskriv statements</button>
+    <button class="btn" id="btnCsv">Eksportér liste (CSV)</button>
+    <button class="btn" id="btnBackup">Backup</button>
+    <button class="btn" id="btnRestore">Gendan</button>
+    <input type="file" id="fileRestore" accept="application/json" class="hidden">
+  </div>
+
+  <div class="list" id="list"></div>
+</main>
+
+<footer>Værktøjet er en hjælp til kontrollen og erstatter ikke fagligt skøn. Filer og data gemmes kun i denne browser. Ved AI-aflæsning sendes sidebillederne til Anthropic med jeres egen API-nøgle. Certifikater indeholder persondata, så gem kun det, I har brug for.</footer>
+
+<dialog id="dlgSet">
+  <h2>Indstillinger</h2>
+  <label>Kontrolleret af (bruges i statements)<input id="setChecker"></label>
+  <label>Firma (bruges i statements)<input id="setCompany"></label>
+  <label>Anthropic API-nøgle til AI-aflæsning<input id="setKey" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
+  <label>Model<input id="setModel"></label>
+  <label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="setAuto" style="width:18px;height:18px"> Aflæs automatisk nye certifikater med AI</label>
+  <p class="hint">Nøglen gemmes kun i denne browser. Uden nøgle indtaster du selv oplysningerne under hvert certifikat.</p>
+  <div class="row" style="justify-content:flex-end"><button class="btn del" id="btnWipe">Slet hele listen</button><button class="btn pri" id="btnSetOk">Gem</button></div>
+</dialog>
+
+<div id="toast"></div>
+<div id="printArea"></div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.display='none',3500)}
+
+/* ================= indstillinger ================= */
+const SET_KEY='verif9606.settings';
+let SET=Object.assign({checker:'',company:'',key:'',model:'claude-sonnet-5',auto:true},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
+function saveSet(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET))}catch(e){}showAi()}
+function showAi(){$('aiState').textContent=SET.key?'AI-aflæsning slået til':'AI-aflæsning ikke sat op'}
+$('btnSettings').onclick=()=>{$('setChecker').value=SET.checker;$('setCompany').value=SET.company;$('setKey').value=SET.key;$('setModel').value=SET.model;$('setAuto').checked=SET.auto;$('dlgSet').showModal()};
+$('btnSetOk').onclick=()=>{SET.checker=$('setChecker').value.trim();SET.company=$('setCompany').value.trim();SET.key=$('setKey').value.trim();SET.model=$('setModel').value.trim()||'claude-sonnet-5';SET.auto=$('setAuto').checked;saveSet();$('dlgSet').close();renderList()};
+$('btnWipe').onclick=async()=>{if(!confirm('Slet alle certifikater og resultater i listen? Det kan ikke fortrydes.'))return;await dbClear();ITEMS=[];$('dlgSet').close();renderList()};
+
+/* ================= IndexedDB ================= */
+let DB;
+function dbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open('verif9606',1);r.onupgradeneeded=()=>{const d=r.result;d.createObjectStore('items',{keyPath:'id'});d.createObjectStore('blobs')};r.onsuccess=()=>{DB=r.result;res()};r.onerror=()=>rej(r.error)})}
+const tx=(s,m='readonly')=>DB.transaction(s,m).objectStore(s);
+const pr=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const dbAll=()=>pr(tx('items').getAll());
+const dbPut=it=>pr(tx('items','readwrite').put(it));
+const dbDel=id=>Promise.all([pr(tx('items','readwrite').delete(id)),pr(tx('blobs','readwrite').delete(id))]);
+const dbBlobPut=(id,b)=>pr(tx('blobs','readwrite').put(b,id));
+const dbBlob=id=>pr(tx('blobs').get(id));
+async function dbClear(){await pr(tx('items','readwrite').clear());await pr(tx('blobs','readwrite').clear())}
+const saveT={};function save(it){clearTimeout(saveT[it.id]);saveT[it.id]=setTimeout(()=>dbPut(it).catch(e=>toast('Kunne ikke gemme i browseren: '+e.message)),300)}
+
+/* ================= definitioner ================= */
+const FIELDS=[
+ ['issuer','Udsteder (prøvningsorgan)'],['issuerEmail','Udsteders e-mail'],
+ ['certNo','Certifikat-nr.'],['fileNo','Sags-/filnr.'],
+ ['name','Svejserens navn'],['employer','Arbejdsgiver'],
+ ['dob','Fødselsdato','date'],['idNo','ID-/personnummer'],
+ ['standard','Standard'],['designation','Betegnelse (symbolisering)'],
+ ['testDate','Prøvedato / gyldig fra','date'],['issueDate','Udstedt (eksaminatorens dato)','date'],
+ ['method','Forlængelse efter §9.3','select'],['validTo','Gyldig til','date'],
+ ['examiner','Eksaminator'],['restrictions','Begrænsninger i anvendelse'],
+ ['verifyUrl','QR-kode eller verifikationslink','text','full']
+];
+const CHECKS=[
+ {g:'Dokument og udsteder',items:[['d1','Udstederen er identificeret med navn og kontaktoplysninger'],['d2','Certifikat-nr. er ens på alle sider'],['d3','Alle sider er med'],['d4','Eksaminatorens navn, dato og underskrift er til stede'],['d5','Udstederens stempel eller segl er til stede']]},
+ {g:'Svejseren',items:[['w1','Foto, navn og fødselsdato er angivet'],['w2','Identifikationsmetoden er angivet'],['w3','Svejseren har vist gyldigt ID, og det passer med certifikatet'],['w4','Arbejdsgiveren passer med dem, der sendte certifikatet']]},
+ {g:'Prøvning og kvalifikation',items:[['q1','Betegnelsen stemmer med prøvedetaljerne'],['q2','Gyldighedsområdet følger reglerne i ISO 9606-1'],['q3','Prøvningen er udført og accepteret som krævet i afsnit 6.4'],['q4','Prøverapporterne har nummer og dato'],['q5','Gyldighedsområdet og eventuelle begrænsninger dækker opgaven']]},
+ {g:'Tegn på forfalskning',flag:true,items:[['f1','Forskellig skrifttype, størrelse eller placering i et felt'],['f2','Rester af slettet tekst, hvide felter eller pletter'],['f3','Stempel, segl eller underskrift ser kopieret eller indsat ud'],['f4','Underskrifterne for 6-måneders bekræftelse ser ens ud eller er lavet på én gang']]}
+];
+const EDIT_TOOLS=/ilovepdf|smallpdf|sejda|pdf24|pdfescape|pdffiller|photoshop|gimp|canva|pixlr|paint|affinity|inkscape|pdfelement|docfly|lightpdf|sodapdf|pdfcandy|pdf candy|microsoft word|libreoffice|openoffice|nitro/i;
+const SCANNERS=/ricoh|canon|xerox|konica|minolta|kyocera|sharp|brother|epson|toshiba|lexmark|hewlett|\bhp\b|océ|olivetti|develop|scan/i;
+const PHONE_W=[720,750,828,1080,1125,1170,1179,1206,1242,1284,1290,1320,1440];
+
+/* ================= datoer ================= */
+const today=()=>new Date().toISOString().slice(0,10);
+const D=s=>s&&/^\d{4}-\d{2}-\d{2}$/.test(s)?new Date(s+'T00:00:00'):null;
+const addM=(d,m)=>{const x=new Date(d);const day=x.getDate();x.setMonth(x.getMonth()+m);if(x.getDate()<day)x.setDate(0);return x};
+const fmt=d=>{if(typeof d==='string')d=D(d);return d?d.toLocaleDateString('da-DK',{day:'2-digit',month:'2-digit',year:'numeric'}):''};
+const days=(a,b)=>Math.round((b-a)/864e5);
+const normDate=s=>{if(!s)return'';s=String(s).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''};
+const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9æøåäöüșțăâîéèç]/g,'');
+
+/* ================= rumænsk CNP ================= */
+function cnpCheck(v){v=(v||'').replace(/\s/g,'');if(!/^[1-8]\d{12}$/.test(v))return null;const k='279146358279';let s=0;for(let i=0;i<12;i++)s+=+v[i]*+k[i];let c=s%11;if(c===10)c=1;const cent={1:1900,2:1900,3:1800,4:1800,5:2000,6:2000,7:1900,8:1900}[v[0]];return{valid:c===+v[12],dob:`${cent+ +v.slice(1,3)}-${v.slice(3,5)}-${v.slice(5,7)}`}}
+
+/* ================= state ================= */
+let ITEMS=[];let FILTER='all';const OPEN=new Set();
+function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},cmp:{},lang:'da'}}
+
+/* ================= PDF/billede ================= */
+const docCache=new Map();
+async function getDoc(id){
+  if(docCache.has(id))return docCache.get(id);
+  const blob=await dbBlob(id);if(!blob)throw new Error('Filen findes ikke længere i browseren.');
+  let d;
+  if(blob.type==='application/pdf'||(!blob.type.startsWith('image/'))){d={pdf:await pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer())}).promise}}
+  else{const url=URL.createObjectURL(blob);d={img:await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=url})}}
+  d.n=d.pdf?d.pdf.numPages:1;
+  docCache.set(id,d);if(docCache.size>6){const k=docCache.keys().next().value;const o=docCache.get(k);if(o.pdf)o.pdf.destroy();docCache.delete(k)}
+  return d;
+}
+async function renderPage(id,p,width){
+  const d=await getDoc(id);const c=document.createElement('canvas');
+  if(d.pdf){const page=await d.pdf.getPage(p);const v1=page.getViewport({scale:1});const vp=page.getViewport({scale:width/v1.width});c.width=Math.round(vp.width);c.height=Math.round(vp.height);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);await page.render({canvasContext:x,viewport:vp}).promise}
+  else{c.width=width;c.height=Math.round(d.img.height*width/d.img.width);const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(d.img,0,0,c.width,c.height)}
+  return c;
+}
+async function inspect(it){
+  const d=await getDoc(it.id);it.pages=d.n;it.images=[];
+  if(d.pdf){
+    try{it.meta=(await d.pdf.getMetadata()).info||null}catch(e){}
+    for(let p=1;p<=d.n;p++){
+      const page=await d.pdf.getPage(p);const v1=page.getViewport({scale:1});
+      try{const tc=await page.getTextContent();if(tc.items.some(i=>i.str.trim()))it.hasText=true}catch(e){}
+      try{const ops=await page.getOperatorList();for(let i=0;i<ops.fnArray.length;i++){if(ops.fnArray[i]===pdfjsLib.OPS.paintImageXObject||ops.fnArray[i]===pdfjsLib.OPS.paintJpegXObject){const oid=ops.argsArray[i][0];const st=oid.startsWith('g_')?page.commonObjs:page.objs;const img=await new Promise(r=>{try{st.get(oid,r)}catch(e){r(null)}});if(img&&img.width)it.images.push({w:img.width,h:img.height,ppi:Math.round(Math.max(img.width,img.height)/(Math.max(v1.width,v1.height)/72)),page:p})}}}catch(e){}
+    }
+  } else it.images.push({w:d.img.width,h:d.img.height,ppi:null,page:1});
+  const t=await renderPage(it.id,1,240);it.thumb=t.toDataURL('image/jpeg',.7);
+  it.metaFlags=metaFlags(it);
+}
+function pdfDate(s){if(!s)return null;const m=String(s).match(/D:(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?/);return m?new Date(Date.UTC(+m[1],(+m[2]||1)-1,+m[3]||1,+m[4]||0,+m[5]||0)):null}
+function metaFlags(it){
+  const F=[],m=it.meta||{},tool=[...new Set([m.Creator,m.Producer].filter(Boolean))].join(' / ');
+  const cd=pdfDate(m.CreationDate),md=pdfDate(m.ModDate);
+  if(tool&&EDIT_TOOLS.test(tool))F.push({lvl:'bad',fraud:true,t:`Filen er gemt med ${tool}, som kan redigere PDF'er.`,en:`The file was saved with ${tool}, a tool that can edit PDF files.`});
+  else if(tool&&SCANNERS.test(tool))F.push({lvl:'ok',t:`Filen er scannet på ${tool}${cd?' den '+cd.toLocaleDateString('da-DK'):''}.`,en:`The file was scanned on ${tool}${cd?' on '+cd.toISOString().slice(0,10):''}.`});
+  if(cd&&md&&Math.abs(md-cd)>6e4)F.push({lvl:'warn',t:`Filen er ændret ${md.toLocaleDateString('da-DK')}, efter den blev oprettet ${cd.toLocaleDateString('da-DK')}.`,en:`The file was modified on ${md.toISOString().slice(0,10)} after it was created on ${cd.toISOString().slice(0,10)}.`});
+  if(!cd&&md&&it.meta)F.push({lvl:'warn',t:'Filen har kun en ændringsdato og ingen oprettelsesdato. Det ses ofte ved konverterede eller redigerede filer.',en:'The file has a modification date but no creation date, which is typical of converted or edited files.'});
+  const ph=it.images.find(i=>PHONE_W.includes(Math.min(i.w,i.h)));
+  if(ph)F.push({lvl:'warn',fraud:true,t:`Siderne er billeder på ${ph.w} × ${ph.h} px. Bredden svarer til en telefonskærm, så det er sandsynligvis et skærmbillede.`,en:`The pages are ${ph.w} × ${ph.h} px images. The width matches a phone screen, so it is most likely a screenshot.`});
+  return F;
+}
+
+/* ================= upload ================= */
+const Q=[];let qBusy=false;
+const drop=$('drop');
+drop.onclick=()=>$('file').click();
+drop.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('file').click()}};
+drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};
+drop.ondragleave=()=>drop.classList.remove('over');
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles([...e.dataTransfer.files])};
+$('file').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+async function sha256(buf){const h=await crypto.subtle.digest('SHA-256',buf);return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('')}
+function addFiles(files){files.filter(f=>f.type==='application/pdf'||/\.pdf$/i.test(f.name)||f.type.startsWith('image/')).forEach(f=>Q.push(f));runQ()}
+async function runQ(){
+  if(qBusy)return;qBusy=true;
+  while(Q.length){
+    const f=Q.shift();$('queue').textContent=`Indlæser ${f.name} (${Q.length} i kø) …`;
+    try{
+      const buf=await f.arrayBuffer();const hash=await sha256(buf);
+      const dup=ITEMS.find(x=>x.file.hash===hash);
+      if(dup){toast(`${f.name} er allerede i listen (samme fil som ${dup.file.name}).`);continue}
+      const it=newItem(f,hash);
+      await dbBlobPut(it.id,new Blob([buf],{type:f.type||(/\.pdf$/i.test(f.name)?'application/pdf':'')}));
+      await inspect(it);ITEMS.unshift(it);await dbPut(it);renderList();
+      if(SET.key&&SET.auto)aiQueue(it.id);
+    }catch(e){console.error(e);toast(`${f.name} kunne ikke læses: ${e.message||e}`)}
+  }
+  $('queue').textContent='';qBusy=false;
+}
+
+/* ================= AI-aflæsning ================= */
+const PROMPT=`You are reading a welder qualification certificate (ISO 9606-1 or similar, possibly issued under class rules such as DNV, BV, LR, ABS). Read all pages. Return ONLY a JSON object, no other text, with exactly these keys:
+{"issuer":string|null,"issuerEmail":string|null,"certNo":string|null,"fileNo":string|null,"name":string|null,"employer":string|null,"dob":"YYYY-MM-DD"|null,"idNo":string|null,"standard":string|null,"designation":string|null,"testDate":"YYYY-MM-DD"|null,"issueDate":"YYYY-MM-DD"|null,"method":"a"|"b"|"c"|null,"validTo":"YYYY-MM-DD"|null,"examiner":string|null,"restrictions":string|null,"verifyUrl":string|null,
+"confirmations":[{"date":"YYYY-MM-DD"|null,"name":string|null,"title":string|null}],
+"revalidations":[{"date":"YYYY-MM-DD"|null,"validUntil":"YYYY-MM-DD"|null,"body":string|null}],
+"anomalies":[string]}
+Rules:
+- testDate is the test date or "validity begins from" date. issueDate is the date next to the examiner's signature.
+- method is the ISO 9606-1 clause 9.3 revalidation method used (a = retest every 3 years, b = verification every 2 years, c = continuous). If "valid until" refers to 9.3a use "a". null if unclear.
+- confirmations: every row in the employer/supervisor 6-month confirmation table (clause 9.2) that contains a date, name or signature, in the order written. Use null for parts you cannot read. Do not include empty rows.
+- revalidations: filled rows in the examiner/examining body revalidation tables.
+- restrictions: any limitation of use written on the certificate, e.g. "for shipbuilding, offshore and marine equipment only".
+- anomalies: short English descriptions of visual signs that the document may have been altered: a field in a different font, size or weight than similar fields, text not aligned with the form, remains of erased text, white patches, stamps or signatures that look pasted, identical-looking 6-month signatures. Empty list if nothing is visible. Do not speculate.
+- Dates must be YYYY-MM-DD. Never guess values that are not written on the certificate.`;
+const AIQ=[];let aiRunning=0;
+function aiQueue(id){const it=ITEMS.find(x=>x.id===id);if(!it)return;if(!SET.key){toast('Indtast en API-nøgle under Indstillinger for at bruge AI-aflæsning.');$('btnSettings').click();return}
+  it.ai.status='queued';it.ai.error='';renderHead(it);if(!AIQ.includes(id))AIQ.push(id);aiPump()}
+function aiPump(){while(aiRunning<2&&AIQ.length){const id=AIQ.shift();aiRunning++;aiRead(id).finally(()=>{aiRunning--;aiPump()})}}
+async function aiRead(id){
+  const it=ITEMS.find(x=>x.id===id);if(!it)return;it.ai.status='running';renderHead(it);
+  try{
+    const d=await getDoc(id);const content=[];
+    for(let p=1;p<=Math.min(d.n,6);p++){const c=await renderPage(id,p,1400);content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:c.toDataURL('image/jpeg',.85).split(',')[1]}})}
+    content.push({type:'text',text:PROMPT});
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'content-type':'application/json','x-api-key':SET.key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:SET.model,max_tokens:4000,messages:[{role:'user',content}]})});
+    const data=await r.json();
+    if(!r.ok)throw new Error(data&&data.error&&data.error.message||('HTTP '+r.status));
+    const txt=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join('\n');
+    const j=JSON.parse(txt.replace(/```json|```/g,'').trim().replace(/^[^{]*/,'').replace(/[^}]*$/,''));
+    FIELDS.forEach(([k,,t])=>{const v=j[k];if(v==null||v==='')return;if(it.f[k])return;it.f[k]=t==='date'?normDate(v):String(v)});
+    if(j.method&&!it.f.method&&/^[abc]$/.test(j.method))it.f.method=j.method;
+    if(Array.isArray(j.confirmations)&&!it.conf.length)it.conf=j.confirmations.map(c=>({date:normDate(c.date),name:c.name||'',title:c.title||'',ai:true}));
+    if(Array.isArray(j.revalidations)&&!it.reval.length)it.reval=j.revalidations.map(c=>({date:normDate(c.date),validUntil:normDate(c.validUntil),body:c.body||'',ai:true}));
+    it.ai={status:'done',anomalies:Array.isArray(j.anomalies)?j.anomalies.filter(Boolean):[],error:'',at:new Date().toISOString()};
+  }catch(e){console.error(e);it.ai.status='error';it.ai.error=String(e.message||e)}
+  save(it);renderList();
+}
+$('btnAiAll').onclick=()=>{const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst.');return}todo.forEach(x=>aiQueue(x.id))};
+
+/* ================= vurdering ================= */
+function crossAlerts(it){
+  const A=[];const cn=norm(it.f.certNo);
+  ITEMS.forEach(o=>{
+    if(o===it)return;
+    const same=cn&&cn===norm(o.f.certNo);
+    const r=it.cmp[o.id];
+    if(!same&&!r)return;
+    const lab=`${o.file.name}`;
+    if(same){
+      const diffs=[['name','navn','name'],['employer','arbejdsgiver','employer'],['dob','fødselsdato','date of birth'],['validTo','gyldig til','valid until'],['issuer','udsteder','issuer'],['testDate','prøvedato','test date']]
+        .filter(([k])=>it.f[k]&&o.f[k]&&norm(it.f[k])!==norm(o.f[k]));
+      if(diffs.length)A.push({lvl:'bad',fraud:true,t:`Samme certifikat-nr. findes i ${lab} med andre oplysninger: ${diffs.map(([k,l])=>`${l} "${o.f[k]}" mod "${it.f[k]}"`).join('; ')}.`,en:`The same certificate number exists in ${lab} with different data: ${diffs.map(([k,,l])=>`${l} "${o.f[k]}" versus "${it.f[k]}"`).join('; ')}.`});
+      else A.push({lvl:'warn',t:`Samme certifikat-nr. findes også i ${lab}.`,en:`The same certificate number also exists in ${lab}.`});
+    }
+    if(r&&r.clusters>0)A.push({lvl:'bad',fraud:true,t:`Billedsammenligning med ${lab}: ${r.clusters} ${r.clusters===1?'område afviger':'områder afviger'} (se udsnit).`,en:`Image comparison with ${lab}: ${r.clusters} area${r.clusters===1?'':'s'} differ (see extract).`,crops:r.crops});
+    else if(r&&r.clusters===0)A.push({lvl:'ok',t:`Billedsammenligning med ${lab}: ingen tydelige forskelle.`,en:`Image comparison with ${lab}: no visible differences.`});
+  });
+  return A;
+}
+function evaluate(it){
+  const A=[],f=it.f,now=D(today());
+  const start=D(f.testDate),iss=D(f.issueDate),to=D(f.validTo);
+  // gyldighedsslut incl. revalidering
+  let end=to;it.reval.forEach(r=>{const v=D(r.validUntil);if(v&&(!end||v>end))end=v});
+  // 6-måneders kæde
+  const events=[...it.conf.map(c=>({d:D(c.date),k:'c'})),...it.reval.map(r=>({d:D(r.date),k:'r'}))].filter(e=>e.d&&(!start||e.d>=start)).sort((a,b)=>a.d-b.d);
+  const unread=it.conf.filter(c=>!D(c.date)).length;
+  let prev=start,gaps=[],nextDue=null,lapsed=null;
+  if(start){for(const e of events){const due=addM(prev,6);if(e.d>due){gaps.push({from:prev,due,to:e.d});if(!lapsed)lapsed=due}if(e.d>prev)prev=e.d}nextDue=addM(prev,6)}
+  const sig={start,events,nextDue,gaps,lapsed,end,unread,last:events.length?events[events.length-1].d:null};
+  let blocking=false;
+  if(!start){A.push({lvl:'warn',t:'Prøvedato / gyldig fra mangler, så gyldigheden kan ikke vurderes.',en:'The test date / validity start is missing, so validity cannot be assessed.'})}
+  else{
+    if(end&&now>end){blocking=true;A.push({lvl:'bad',t:`Certifikatet udløb ${fmt(end)}.`,en:`The certificate expired on ${iso(end)}.`})}
+    else if(end&&days(now,end)<60)A.push({lvl:'warn',t:`Certifikatet udløber om ${days(now,end)} dage (${fmt(end)}).`,en:`The certificate expires in ${days(now,end)} days (${iso(end)}).`});
+    gaps.forEach(g=>{blocking=true;A.push({lvl:'bad',t:`6-måneders bekræftelse mangler: efter ${fmt(g.from)} skulle der være underskrevet senest ${fmt(g.due)}, men næste underskrift er først ${fmt(g.to)}. Kvalifikationen bortfaldt ${fmt(g.due)}.`,en:`Missing 6-month confirmation: after ${iso(g.from)} it had to be signed by ${iso(g.due)}, but the next signature is dated ${iso(g.to)}. The qualification lapsed on ${iso(g.due)}.`})});
+    if(now>nextDue){blocking=true;A.push({lvl:'bad',t:`6-måneders bekræftelsen efter §9.2 skulle have været underskrevet senest ${fmt(nextDue)}${sig.last?` (seneste underskrift ${fmt(sig.last)})`:' (ingen underskrifter)'}.`,en:`The 6-month confirmation per clause 9.2 was due by ${iso(nextDue)}${sig.last?` (last signature ${iso(sig.last)})`:' (no signatures)'}.`})}
+    else if(!gaps.length){const dl=days(now,nextDue);A.push({lvl:dl<30?'warn':'ok',t:`Næste 6-måneders bekræftelse skal underskrives senest ${fmt(nextDue)}${dl<30?` (om ${dl} dage)`:''}.`,en:`The next 6-month confirmation must be signed by ${iso(nextDue)}.`})}
+    if(unread)A.push({lvl:'warn',t:`${unread} underskrift${unread>1?'er':''} har en dato, der ikke kunne læses. Kontrollér dem på certifikatet.`,en:`${unread} signature${unread>1?'s have':' has'} an unreadable date. Check on the certificate.`});
+    if(to&&f.method){const lim=f.method==='a'?36:f.method==='b'?24:null;if(lim&&to>addM(start,lim))A.push({lvl:'bad',fraud:true,t:`"Gyldig til" er længere end §9.3 ${f.method}) tillader (højst ${lim/12} år fra ${fmt(start)}).`,en:`"Valid until" exceeds what clause 9.3 ${f.method}) allows (max. ${lim/12} years from ${iso(start)}).`})}
+    if(to&&to<start)A.push({lvl:'bad',fraud:true,t:'"Gyldig til" ligger før prøvedatoen.',en:'"Valid until" is before the test date.'});
+    if(iss&&iss<start)A.push({lvl:'bad',fraud:true,t:'Certifikatet er udstedt før prøvedatoen.',en:'The certificate is issued before the test date.'});
+  }
+  if(iss&&iss>now)A.push({lvl:'bad',fraud:true,t:'Udstedelsesdatoen ligger i fremtiden.',en:'The issue date is in the future.'});
+  it.conf.forEach(c=>{const d=D(c.date);if(d&&d>now)A.push({lvl:'bad',fraud:true,t:`En 6-måneders underskrift er dateret i fremtiden (${fmt(d)}).`,en:`A 6-month signature is dated in the future (${iso(d)}).`})});
+  const c=cnpCheck(f.idNo);
+  if(c){if(!c.valid)A.push({lvl:'bad',fraud:true,t:'Det rumænske personnummer (CNP) har forkert kontrolciffer.',en:'The Romanian personal number (CNP) has an invalid check digit.'});
+    else if(f.dob&&f.dob!==c.dob)A.push({lvl:'bad',fraud:true,t:`Personnummeret (CNP) passer til fødselsdato ${fmt(c.dob)}, ikke den angivne.`,en:`The personal number (CNP) matches date of birth ${c.dob}, not the one stated.`});
+    else A.push({lvl:'ok',t:'Personnummeret (CNP) er gyldigt og passer med fødselsdatoen.',en:'The personal number (CNP) is valid and matches the date of birth.'})}
+  if(f.name&&f.employer&&norm(f.name).split('').sort().join('')===norm(f.employer).split('').sort().join(''))A.push({lvl:'warn',fraud:true,t:'Arbejdsgiveren er svejserens eget navn. Det kan være korrekt for selvstændige, men skal bekræftes af udstederen.',en:"The employer is the welder's own name. This may be correct for a self-employed welder but must be confirmed by the issuer."});
+  if(f.restrictions)A.push({lvl:'warn',t:`Begrænsning: ${f.restrictions}`,en:`Restriction: ${f.restrictions}`});
+  it.metaFlags.forEach(m=>A.push(m));
+  it.ai.anomalies.forEach(a=>A.push({lvl:'warn',fraud:true,t:`AI-bemærkning: ${a}`,en:`AI observation: ${a}`}));
+  CHECKS.filter(g=>g.flag).flatMap(g=>g.items).forEach(([id,t])=>{if(it.c[id])A.push({lvl:'bad',fraud:true,t:`Observeret: ${t}.`,en:`Observed: ${EN_FLAG[id]}.`})});
+  crossAlerts(it).forEach(a=>A.push(a));
+  const fraud=A.filter(a=>a.fraud&&a.lvl!=='ok');
+  const req=CHECKS.filter(g=>!g.flag).flatMap(g=>g.items.map(i=>i[0]));const done=req.filter(id=>it.c[id]).length;
+  let cls,big,en,sub='';
+  if(it.cf.no){cls='bad';big='Afvist af udsteder';en='Rejected by the issuer'}
+  else if(fraud.length&&!it.cf.ok){cls='bad';big='Mulig forfalskning';en='Possibly forged or altered'}
+  else if(!start){cls='warn';big='Mangler data';en='Insufficient data'}
+  else if(blocking){cls='bad';big='Ikke gyldigt';en='Not valid'}
+  else{cls='ok';big=it.cf.ok?'Gyldigt, bekræftet':'Gyldigt';en=it.cf.ok?'Valid, confirmed by the issuer':'Valid'}
+  if(it.ai.status==='running')sub='Aflæses med AI …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ai.status==='error')sub='AI-fejl';
+  else if(cls!=='bad'||big==='Ikke gyldigt')sub=`Tjekliste ${done}/${req.length}`;
+  return{A,cls,big,en,sub,sig,fraud,done,req:req.length};
+}
+const iso=d=>d?new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10):'';
+const EN_FLAG={f1:'a field has a different font, size or position',f2:'remains of erased text, white patches or smudges',f3:'a stamp, seal or signature appears copied or pasted',f4:'the 6-month signatures look identical or made at the same time'};
+
+/* ================= statement ================= */
+function statement(it,lang){
+  const v=evaluate(it),f=it.f,da=lang!=='en';
+  const L=(a,b)=>da?a:b;
+  const who=[f.name||L('ukendt svejser','unknown welder'),f.dob?`(${L('f.','born')} ${da?fmt(f.dob):f.dob})`:''].join(' ');
+  const intro=L(
+    `Certifikat ${esc(f.certNo||'uden nummer')}${f.standard?' efter '+esc(f.standard):''}${f.issuer?', udstedt af '+esc(f.issuer):''}${f.issueDate?' den '+fmt(f.issueDate):''}, til ${esc(who)}. Arbejdsgiver på certifikatet: ${esc(f.employer||'ikke angivet')}.${f.designation?' Betegnelse: '+esc(f.designation)+'.':''}`,
+    `Certificate ${esc(f.certNo||'without number')}${f.standard?' to '+esc(f.standard):''}${f.issuer?', issued by '+esc(f.issuer):''}${f.issueDate?' on '+f.issueDate:''}, for ${esc(who)}. Employer stated on the certificate: ${esc(f.employer||'not stated')}.${f.designation?' Designation: '+esc(f.designation)+'.':''}`);
+  const conclTxt={bad:{'Mulig forfalskning':L('Konklusion: Certifikatet er muligvis forfalsket eller ændret. Det må ikke anvendes, før udstederen har bekræftet det.','Conclusion: The certificate is possibly forged or altered. It must not be used until the issuer has confirmed it.'),'Afvist af udsteder':L('Konklusion: Udstederen har ikke kunnet bekræfte certifikatet. Det må ikke anvendes.','Conclusion: The issuer could not confirm the certificate. It must not be used.'),'Ikke gyldigt':L('Konklusion: Certifikatet er ikke gyldigt i dag.','Conclusion: The certificate is not valid today.')},
+    ok:L(`Konklusion: Certifikatet er gyldigt i dag${it.cf.ok?' og bekræftet af udstederen':''}.`,`Conclusion: The certificate is valid today${it.cf.ok?' and confirmed by the issuer':''}.`),
+    warn:L('Konklusion: Der mangler oplysninger til at vurdere certifikatet.','Conclusion: Information is missing to assess the certificate.')};
+  const concl=v.cls==='bad'?conclTxt.bad[v.big]:conclTxt[v.cls];
+  const s=v.sig;
+  const val=s.start?L(`Gyldigt fra ${fmt(s.start)}${s.end?' til '+fmt(s.end):''}${f.method?` (forlængelse efter §9.3 ${f.method})`:''}. `,`Valid from ${iso(s.start)}${s.end?' to '+iso(s.end):''}${f.method?` (revalidation per clause 9.3 ${f.method})`:''}. `):'';
+  const conf=it.conf.length?L(`6-måneders bekræftelser (§9.2): ${it.conf.map(c=>`${c.date?fmt(c.date):'ulæselig dato'}${c.name?' '+esc(c.name):''}`).join(', ')}.`,`6-month confirmations (clause 9.2): ${it.conf.map(c=>`${c.date||'unreadable date'}${c.name?' '+esc(c.name):''}`).join(', ')}.`):L('Ingen 6-måneders bekræftelser er underskrevet.','No 6-month confirmations have been signed.');
+  const find=v.A.filter(a=>a.lvl!=='ok');const okf=v.A.filter(a=>a.lvl==='ok');
+  const crops=v.A.filter(a=>a.crops).flatMap(a=>a.crops);
+  let rec;
+  if(v.cls==='bad'&&(v.big==='Mulig forfalskning'))rec=L(`Kontakt ${esc(f.issuer||'udstederen')} og få bekræftet certifikatets ægthed og indhold, især arbejdsgiveren. Brug kontaktoplysninger fra udstederens officielle hjemmeside. Svejseren må ikke svejse på certifikatet, før det er bekræftet.`,`Contact ${esc(f.issuer||'the issuer')} to confirm the authenticity and content of the certificate, in particular the employer. Use contact details from the issuer's official website. The welder must not weld under this certificate until it is confirmed.`);
+  else if(v.big==='Ikke gyldigt')rec=L('Svejseren skal have certifikatet forlænget eller tage en ny prøve, før der svejses på det.','The welder must have the certificate revalidated or take a new test before welding under it.');
+  else if(v.cls==='ok')rec=L(`Næste 6-måneders bekræftelse skal underskrives senest ${fmt(s.nextDue)}. Kontrollér at gyldighedsområdet dækker opgaven.`,`The next 6-month confirmation must be signed by ${iso(s.nextDue)}. Check that the range of qualification covers the work.`);
+  else rec=L('Udfyld de manglende oplysninger, eller aflæs certifikatet med AI.','Complete the missing information or read the certificate with AI.');
+  const by=[SET.checker,SET.company].filter(Boolean).join(', ');
+  return{cls:v.cls,html:`<h4>${L('Statement: kontrol af svejsercertifikat','Statement: welder certificate verification')}</h4>
+  <p>${intro}</p>
+  <div class="concl ${v.cls}">${concl}</div>
+  <p>${val}${conf}</p>
+  ${find.length?`<p><b>${L('Fund','Findings')}</b></p><ul>${find.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
+  ${okf.length?`<p><b>${L('Kontrolleret uden bemærkninger','Checked without remarks')}</b></p><ul>${okf.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
+  ${crops.map(c=>`<figure style="margin:6px 0"><figcaption style="font-size:12px">${esc(da?c.cap:c.capEn)}</figcaption><img src="${c.a}"><img src="${c.b}"></figure>`).join('')}
+  <p><b>${L('Anbefaling','Recommendation')}:</b> ${rec}</p>
+  ${it.cf.ok?`<p>${L('Bekræftet af udsteder','Confirmed by the issuer')} ${esc(it.cf.date)} ${esc(it.cf.by)}.</p>`:''}
+  ${it.notes?`<p>${esc(it.notes)}</p>`:''}
+  <p style="font-size:12px;color:#555">${L('Kontrolleret','Checked')} ${da?fmt(today()):today()}${by?` ${L('af','by')} ${esc(by)}`:''}. ${L('Fil','File')}: ${esc(it.file.name)}, SHA-256 ${esc(it.file.hash.slice(0,16))}…</p>`};
+}
+
+/* ================= billedsammenligning ================= */
+function mask(c,th=140){const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data,m=new Uint8Array(w*h);for(let i=0,j=0;i<m.length;i++,j+=4)m[i]=(d[j]*.3+d[j+1]*.59+d[j+2]*.11)<th?1:0;return{w,h,m}}
+function boxH(m,w,h,r){const o=new Uint16Array(w*h);for(let y=0;y<h;y++){let s=0,b=y*w;for(let x=-r;x<w;x++){if(x+r<w)s+=m[b+x+r];if(x-r-1>=0)s-=m[b+x-r-1];if(x>=0)o[b+x]=s}}return o}
+function boxV(m,w,h,r){const o=new Uint16Array(w*h);for(let x=0;x<w;x++){let s=0;for(let y=-r;y<h;y++){if(y+r<h)s+=m[(y+r)*w+x];if(y-r-1>=0)s-=m[(y-r-1)*w+x];if(y>=0)o[y*w+x]=s}}return o}
+function dilate(m,w,h,r){const a=boxH(m,w,h,r),t=new Uint8Array(w*h);for(let i=0;i<t.length;i++)t[i]=a[i]?1:0;const b=boxV(t,w,h,r);for(let i=0;i<t.length;i++)t[i]=b[i]?1:0;return t}
+function openLine(m,w,h,r,v){const f=v?boxV:boxH,a=f(m,w,h,r),e=new Uint8Array(w*h),full=2*r+1;for(let i=0;i<e.length;i++)e[i]=a[i]===full?1:0;const b=f(e,w,h,r);for(let i=0;i<e.length;i++)e[i]=b[i]?1:0;return e}
+function noLines(M){const{w,h,m}=M,hl=openLine(m,w,h,20,false),vl=openLine(m,w,h,20,true),l=new Uint8Array(w*h);for(let i=0;i<l.length;i++)l[i]=hl[i]|vl[i];const ld=dilate(l,w,h,1),o=new Uint8Array(w*h);for(let i=0;i<o.length;i++)o[i]=m[i]&&!ld[i]?1:0;return o}
+function fitAxis(pa,pb){const sm=p=>{const o=new Float32Array(p.length);for(let i=1;i<p.length-1;i++){const v=(p[i-1]+p[i]+p[i+1])/3;o[i]=v*v}return o};const a=sm(pa),b=sm(pb);let best=[-1,1,0];
+  for(let s=.85;s<=1.15;s+=.0025)for(let o=-150;o<=150;o++){let sc=0;for(let t=0;t<a.length;t++){const j=Math.round(s*t+o);if(j>=0&&j<b.length)sc+=a[t]*b[j]}if(sc>best[0])best=[sc,s,o]}return[best[1],best[2]]}
+async function compare(x,y){
+  // den laveste opløsning bruges som reference; det giver færrest falske fund
+  const resW=it=>Math.max(0,...it.images.filter(i=>i.page===1).map(i=>i.w));
+  const [a,b]=resW(x)&&resW(y)&&resW(y)<resW(x)?[y,x]:[x,y];
+  const cA=await renderPage(a.id,1,1400),cB=await renderPage(b.id,1,1400);
+  const A=mask(cA),B=mask(cB);
+  const rA=new Float32Array(A.h),kA=new Float32Array(A.w),rB=new Float32Array(B.h),kB=new Float32Array(B.w);
+  for(let y=0;y<A.h;y++)for(let x=0;x<A.w;x++)if(A.m[y*A.w+x]){rA[y]++;kA[x]++}
+  for(let y=0;y<B.h;y++)for(let x=0;x<B.w;x++)if(B.m[y*B.w+x]){rB[y]++;kB[x]++}
+  const[sy,oy]=fitAxis(rA,rB),[sx,ox]=fitAxis(kA,kB);
+  const cBw=document.createElement('canvas');cBw.width=A.w;cBw.height=A.h;const bx=cBw.getContext('2d');bx.fillStyle='#fff';bx.fillRect(0,0,A.w,A.h);bx.setTransform(1/sx,0,0,1/sy,-ox/sx,-oy/sy);bx.drawImage(cB,0,0);bx.setTransform(1,0,0,1,0,0);
+  const Bw=mask(cBw),a2=noLines(A),b2=noLines(Bw),w=A.w,h=A.h,da=dilate(a2,w,h,4),db=dilate(b2,w,h,4);
+  const g=20,gw=Math.floor(w/g),gh=Math.floor(h/g),cnt=new Uint16Array(gw*gh);
+  for(let y=0;y<gh*g;y++)for(let x=0;x<gw*g;x++){const i=y*w+x;if((a2[i]&&!db[i])||(b2[i]&&!da[i]))cnt[((y/g)|0)*gw+((x/g)|0)]++}
+  const on=cnt.map(v=>v>25?1:0),seen=new Int32Array(gw*gh).fill(-1),cl=[];
+  for(let i=0;i<on.length;i++){if(!on[i]||seen[i]>=0)continue;const q=[i];seen[i]=cl.length;const c={x0:1e9,y0:1e9,x1:0,y1:0,n:0,sum:0};
+    while(q.length){const k=q.pop(),kx=k%gw,ky=(k/gw)|0;c.n++;c.sum+=cnt[k];c.x0=Math.min(c.x0,kx);c.y0=Math.min(c.y0,ky);c.x1=Math.max(c.x1,kx);c.y1=Math.max(c.y1,ky);
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const nx=kx+dx,ny=ky+dy;if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const j=ny*gw+nx;if(on[j]&&seen[j]<0){seen[j]=cl.length;q.push(j)}}}
+    cl.push(c)}
+  const sig=cl.filter(c=>c.n>=3).sort((p,q)=>q.sum-p.sum);
+  const crops=sig.slice(0,2).map((c,ix)=>{const pad=40,x=Math.max(0,c.x0*g-pad*3),y=Math.max(0,c.y0*g-pad),cw=Math.min(w-x,(c.x1-c.x0+1)*g+pad*6),ch=Math.min(h-y,(c.y1-c.y0+1)*g+pad*2);
+    const cut=src=>{const cc=document.createElement('canvas');const sc=Math.min(1,700/cw);cc.width=Math.round(cw*sc);cc.height=Math.round(ch*sc);cc.getContext('2d').drawImage(src,x,y,cw,ch,0,0,cc.width,cc.height);return cc.toDataURL('image/jpeg',.8)};
+    return{a:cut(cA),b:cut(cBw),cap:`Område ${ix+1} (${Math.round(y/h*100)} % fra toppen). Øverst: ${a.file.name}. Nederst: ${b.file.name}.`,capEn:`Area ${ix+1} (${Math.round(y/h*100)} % from the top). Top: ${a.file.name}. Bottom: ${b.file.name}.`}});
+  const res={clusters:sig.length,crops,at:new Date().toISOString()};
+  a.cmp[b.id]=res;b.cmp[a.id]={clusters:sig.length,crops:crops.map(c=>({a:c.b,b:c.a,cap:c.cap.replace(/Øverst: (.*)\. Nederst: (.*)\./,'Øverst: $2. Nederst: $1.'),capEn:c.capEn.replace(/Top: (.*)\. Bottom: (.*)\./,'Top: $2. Bottom: $1.')})),at:res.at};
+  save(a);save(b);
+}
+let cmpBusy=false;
+async function autoCompare(){
+  if(cmpBusy)return;cmpBusy=true;
+  try{for(const a of ITEMS)for(const b of ITEMS){if(a===b||a.id>b.id)continue;const cn=norm(a.f.certNo);if(!cn||cn!==norm(b.f.certNo)||a.cmp[b.id]||a.file.hash===b.file.hash)continue;
+    $('queue').textContent=`Sammenligner ${a.file.name} med ${b.file.name} …`;await new Promise(r=>setTimeout(r,20));
+    try{await compare(a,b)}catch(e){console.error(e)}
+    renderList()}}finally{$('queue').textContent=Q.length?$('queue').textContent:'';cmpBusy=false}
+}
+
+/* ================= liste ================= */
+$('q').oninput=renderList;
+const ORDER={bad:0,warn:1,ok:2};
+function renderList(){
+  const q=norm($('q').value);
+  const ev=ITEMS.map(it=>({it,v:evaluate(it)}));
+  const counts={all:ev.length,ok:0,bad:0,fraud:0,warn:0};
+  ev.forEach(({v})=>{if(v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder')counts.fraud++;else if(v.cls==='bad')counts.bad++;else if(v.cls==='ok')counts.ok++;else counts.warn++});
+  $('chips').innerHTML=[['all','Alle'],['ok','Gyldige'],['bad','Ikke gyldige'],['fraud','Mulig forfalskning'],['warn','Mangler data']].map(([k,l])=>`<button class="chip ${FILTER===k?'on':''}" data-fl="${k}">${l}<b>${counts[k]}</b></button>`).join('');
+  $('chips').querySelectorAll('[data-fl]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.fl;renderList()});
+  const shown=ev.filter(({it,v})=>{
+    if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
+    const isF=v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder';
+    if(FILTER==='fraud')return isF;if(FILTER==='bad')return v.cls==='bad'&&!isF;if(FILTER==='ok')return v.cls==='ok';if(FILTER==='warn')return v.cls==='warn';return true;
+  }).sort((a,b)=>ORDER[a.v.cls]-ORDER[b.v.cls]||(a.it.f.name||a.it.file.name).localeCompare(b.it.f.name||b.it.file.name));
+  const L=$('list');
+  if(!ITEMS.length){L.innerHTML='<div class="empty">Listen er tom. Træk certifikater ind i feltet ovenfor.</div>';return}
+  L.innerHTML=`<div class="lh"><span></span><span>Svejser og certifikat</span><span>Udsteder og arbejdsgiver</span><span>Gyldig til</span><span>Næste underskrift</span><span>Resultat</span><span></span></div>`+(shown.length?'':'<div class="empty">Ingen certifikater matcher søgningen.</div>');
+  shown.forEach(({it})=>{const a=document.createElement('article');a.className='it'+(OPEN.has(it.id)?' open':'');a.id='it_'+it.id;L.appendChild(a);renderItem(it)});
+  autoCompare();
+}
+function headHTML(it,v){
+  const s=v.sig;
+  return `<img src="${it.thumb}" alt="">
+  <div class="who"><b>${esc(it.f.name||it.file.name)}</b><span class="mono">${esc(it.f.certNo||'Cert.-nr. mangler')}${it.f.name?' · '+esc(it.file.name):''}</span></div>
+  <div class="col">${esc(it.f.issuer||'')}<span>${esc(it.f.employer||'')}</span></div>
+  <div class="col mono">${s.end?fmt(s.end):'–'}</div>
+  <div class="col mono">${s.nextDue?fmt(s.nextDue):'–'}<span>${it.conf.length} underskr.</span></div>
+  <div class="stat"><span class="tag ${v.cls}">${esc(v.big)}</span><small>${esc(v.sub)}</small></div>
+  <span class="car">▸</span>`;
+}
+function renderHead(it){const a=$('it_'+it.id);if(!a)return;const h=a.querySelector('.head');if(h)h.innerHTML=headHTML(it,evaluate(it))}
+function renderItem(it){
+  const a=$('it_'+it.id);if(!a)return;const v=evaluate(it);
+  a.innerHTML=`<button class="head" aria-expanded="${OPEN.has(it.id)}">${headHTML(it,v)}</button>`;
+  a.querySelector('.head').onclick=()=>{if(OPEN.has(it.id))OPEN.delete(it.id);else OPEN.add(it.id);a.classList.toggle('open');renderItem(it)};
+  if(OPEN.has(it.id))a.appendChild(bodyEl(it));
+}
+function refresh(it){ITEMS.forEach(o=>{if(o===it||OPEN.has(o.id))refreshOne(o);else renderHead(o)})}
+function refreshOne(it){renderHead(it);const b=$('it_'+it.id);if(!b)return;const v=evaluate(it);
+  const st=b.querySelector('[data-stmt]');if(st){const s=statement(it,it.lang);st.innerHTML=s.html}
+  const al=b.querySelector('[data-alerts]');if(al)al.innerHTML=alertsHTML(v)}
+function alertsHTML(v){return v.A.map(a=>`<div class="al ${a.lvl}">${esc(a.t)}</div>`).join('')||'<div class="hint">Ingen automatiske fund endnu.</div>'}
+
+function bodyEl(it){
+  const d=document.createElement('div');d.className='body';const v=evaluate(it);const m=it.meta||{};
+  const kv=[['Filtype',(it.file.type==='application/pdf'||/\.pdf$/i.test(it.file.name))?'PDF':'Billede'],m.Creator&&['Lavet med',m.Creator],m.Producer&&['Gemt med',m.Producer],pdfDate(m.CreationDate)&&['Oprettet',pdfDate(m.CreationDate).toLocaleString('da-DK')],pdfDate(m.ModDate)&&['Ændret',pdfDate(m.ModDate).toLocaleString('da-DK')],...it.images.map(i=>[`Billede s. ${i.page}`,`${i.w} × ${i.h} px${i.ppi?` · ca. ${i.ppi} ppi`:''}`]),it.meta&&['Tekstlag',it.hasText?'Ja':'Nej, kun billede'],['SHA-256',it.file.hash.slice(0,16)+'…']].filter(Boolean);
+  const others=ITEMS.filter(o=>o!==it);
+  d.innerHTML=`
+  <div>
+    <div class="box"><h3>Certifikatet</h3><div class="pages" data-pages><span class="hint">Viser siderne …</span></div></div>
+    <div class="box"><h3>Filspor</h3><dl class="kv">${kv.map(([k,x])=>`<dt>${esc(k)}</dt><dd>${esc(x)}</dd>`).join('')}</dl></div>
+    <div class="box"><h3>Sammenlign med et andet certifikat i listen</h3>
+      <p class="hint" style="margin-top:0">Sker automatisk, når to certifikater har samme nummer.</p>
+      <div class="row"><select data-cmpsel style="max-width:340px"><option value="">Vælg</option>${others.map(o=>`<option value="${o.id}">${esc(o.f.name||o.file.name)} ${esc(o.f.certNo||'')}</option>`).join('')}</select><button class="btn sm" data-cmpgo>Sammenlign</button></div>
+      <div class="crop" data-crops>${Object.entries(it.cmp).map(([oid,r])=>{const o=ITEMS.find(x=>x.id===oid);if(!o)return'';return `<p class="hint">${esc(o.file.name)}: ${r.clusters?r.clusters+' afvigende område(r)':'ingen tydelige forskelle'}</p>`+r.crops.map(c=>`<figure><figcaption>${esc(c.cap)}</figcaption><img src="${c.a}"><img src="${c.b}"></figure>`).join('')}).join('')}</div>
+    </div>
+  </div>
+  <div>
+    <div class="box">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Statement</h3>
+        <div class="row"><span class="seg"><button data-lang="da" class="${it.lang!=='en'?'on':''}">Dansk</button><button data-lang="en" class="${it.lang==='en'?'on':''}">English</button></span>
+        <button class="btn sm" data-copy>Kopiér</button><button class="btn sm" data-print>Udskriv</button></div></div>
+      <div class="stmt" data-stmt>${statement(it,it.lang).html}</div>
+    </div>
+    <div class="box"><h3>Automatiske fund</h3><div class="alerts" data-alerts>${alertsHTML(v)}</div></div>
+    <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med AI':'Aflæs med AI'}</button></div>
+      ${it.ai.status==='error'?`<div class="al bad" style="margin:8px 0">AI-aflæsningen fejlede: ${esc(it.ai.error)}</div>`:''}
+      ${it.ai.status==='done'?'<p class="hint">Aflæst med AI. Kontrollér værdierne mod certifikatet, især håndskrevne datoer.</p>':''}
+      <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}"></label>`).join('')}</div>
+    </div>
+    <div class="box"><h3>6-måneders underskrifter (§9.2)</h3>
+      <p class="hint" style="margin-top:0">Arbejdsgiveren eller svejsekoordinatoren skal bekræfte hver 6. måned. Der må ikke gå mere end 6 måneder fra gyldig-fra-datoen eller den seneste underskrift.</p>
+      <table class="sg"><thead><tr><th>Dato</th><th>Navn</th><th>Stilling</th><th></th></tr></thead><tbody data-conf></tbody></table>
+      <button class="btn sm" data-addconf style="margin-top:6px">Tilføj underskrift</button>
+      <h4>Revalidering hos eksaminator (§9.3)</h4>
+      <table class="sg"><thead><tr><th>Dato</th><th>Gyldig til</th><th>Organ</th><th></th></tr></thead><tbody data-reval></tbody></table>
+      <button class="btn sm" data-addreval style="margin-top:6px">Tilføj revalidering</button>
+    </div>
+    <details class="box dd"><summary>Manuel tjekliste (${v.done}/${v.req})</summary>
+      ${CHECKS.map(g=>`<h4>${g.g}</h4>`+g.items.map(([id,t])=>`<label class="ck ${g.flag?'flag':''}"><input type="checkbox" data-c="${id}"><span>${t}</span></label>`).join('')).join('')}
+    </details>
+    <div class="box"><h3>Bekræftelse hos udstederen</h3>
+      <div class="row"><button class="btn sm" data-mail>Skriv mail til udstederen</button><button class="btn sm" data-search>Find verifikationsside</button><button class="btn sm" data-url>Åbn verifikationslink</button></div>
+      <div class="fields" style="margin-top:10px">
+        <label class="full" style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" data-cf="ok" style="width:17px;height:17px;accent-color:var(--lime)"> Udstederen har bekræftet, at certifikatet er ægte og uændret</label>
+        <label>Dato<input type="date" data-cf="date"></label><label>Bekræftet af<input data-cf="by"></label>
+        <label class="full" style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" data-cf="no" style="width:17px;height:17px;accent-color:var(--bad)"> Udstederen har afvist certifikatet eller oplyst andre data</label>
+        <label class="full">Bemærkninger<textarea data-notes rows="2"></textarea></label>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm del" data-delete>Fjern fra listen</button></div>
+    </div>
+  </div>`;
+  const q=s=>d.querySelector(s),qa=s=>d.querySelectorAll(s);
+  (async()=>{try{const doc=await getDoc(it.id);const P=q('[data-pages]');P.innerHTML='';for(let p=1;p<=doc.n;p++){const c=await renderPage(it.id,p,1100);P.appendChild(c)}}catch(e){q('[data-pages]').innerHTML=`<span class="hint">${esc(e.message)}</span>`}})();
+  qa('[data-f]').forEach(el=>{el.value=it.f[el.dataset.f]||'';el.oninput=()=>{it.f[el.dataset.f]=el.value;save(it);refresh(it)};if(el.dataset.f==='certNo')el.onchange=()=>renderList()});
+  qa('[data-c]').forEach(el=>{el.checked=!!it.c[el.dataset.c];el.onchange=()=>{it.c[el.dataset.c]=el.checked;save(it);refresh(it);d.querySelector('summary').textContent=`Manuel tjekliste (${evaluate(it).done}/${evaluate(it).req})`}});
+  qa('[data-cf]').forEach(el=>{const k=el.dataset.cf;if(el.type==='checkbox')el.checked=!!it.cf[k];else el.value=it.cf[k]||'';el.oninput=()=>{it.cf[k]=el.type==='checkbox'?el.checked:el.value;save(it);refresh(it)}});
+  q('[data-notes]').value=it.notes||'';q('[data-notes]').oninput=e=>{it.notes=e.target.value;save(it);refresh(it)};
+  const rows=(key,cols,tb)=>{tb.innerHTML=it[key].map((r,i)=>`<tr>${cols.map(([k,t])=>`<td><input data-k="${k}" data-i="${i}" type="${t}" value="${esc(r[k]||'')}"></td>`).join('')}<td><button class="btn sm" data-rm="${i}" aria-label="Fjern">✕</button></td></tr>`).join('')||`<tr><td colspan="${cols.length+1}" class="hint">Ingen endnu.</td></tr>`;
+    tb.querySelectorAll('input').forEach(el=>el.oninput=()=>{it[key][+el.dataset.i][el.dataset.k]=el.value;it[key][+el.dataset.i].ai=false;save(it);refresh(it)});
+    tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{it[key].splice(+b.dataset.rm,1);save(it);rows(key,cols,tb);refresh(it)})};
+  const cc=[['date','date'],['name','text'],['title','text']],rc=[['date','date'],['validUntil','date'],['body','text']];
+  rows('conf',cc,q('[data-conf]'));rows('reval',rc,q('[data-reval]'));
+  q('[data-addconf]').onclick=()=>{it.conf.push({date:'',name:'',title:''});save(it);rows('conf',cc,q('[data-conf]'));refresh(it)};
+  q('[data-addreval]').onclick=()=>{it.reval.push({date:'',validUntil:'',body:''});save(it);rows('reval',rc,q('[data-reval]'));refresh(it)};
+  qa('[data-lang]').forEach(b=>b.onclick=()=>{it.lang=b.dataset.lang;save(it);qa('[data-lang]').forEach(x=>x.classList.toggle('on',x===b));refresh(it)});
+  q('[data-copy]').onclick=async()=>{const t=q('[data-stmt]').innerText;try{await navigator.clipboard.writeText(t);toast('Statement kopieret.')}catch(e){toast('Kunne ikke kopiere. Markér teksten og kopiér manuelt.')}};
+  q('[data-print]').onclick=()=>printStatements([it]);
+  q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
+  q('[data-cmpgo]').onclick=async()=>{const o=ITEMS.find(x=>x.id===q('[data-cmpsel]').value);if(!o)return;q('[data-crops]').innerHTML='<p class="hint">Sammenligner …</p>';await new Promise(r=>setTimeout(r,20));try{await compare(it,o)}catch(e){toast('Sammenligningen fejlede: '+e.message)}renderList()};
+  q('[data-mail]').onclick=()=>mailIssuer(it);
+  q('[data-search]').onclick=()=>window.open('https://www.google.com/search?q='+encodeURIComponent(`${it.f.issuer||''} welder qualification certificate verification`),'_blank','noopener');
+  q('[data-url]').onclick=()=>{const u=(it.f.verifyUrl||'').trim();if(!/^https?:\/\//i.test(u)){toast('Indtast linket fra certifikatets QR-kode i feltet "QR-kode eller verifikationslink".');return}if(confirm('Åbn '+u+'?\n\nTjek at domænet tilhører udstederen. Falske certifikater kan have falske links.'))window.open(u,'_blank','noopener')};
+  q('[data-delete]').onclick=async()=>{if(!confirm('Fjern certifikatet fra listen?'))return;await dbDel(it.id);docCache.delete(it.id);ITEMS=ITEMS.filter(x=>x!==it);ITEMS.forEach(o=>{if(o.cmp[it.id]){delete o.cmp[it.id];save(o)}});OPEN.delete(it.id);renderList()};
+  return d;
+}
+function mailIssuer(it){
+  const f=it.f;const conf=it.conf.map(c=>`  ${c.date||'?'} ${c.name||''} ${c.title||''}`).join('\n');
+  const body=`Dear ${f.issuer||'Sir/Madam'},
+
+We have received the welder qualification certificate below and kindly ask you to confirm that it was issued by you and that the content is unchanged.
+
+Certificate no.: ${f.certNo||''}
+File no.: ${f.fileNo||''}
+Welder: ${f.name||''}
+Date of birth: ${f.dob||''}
+Employer stated on the certificate: ${f.employer||''}
+Designation: ${f.designation||''}
+Validity from: ${f.testDate||''}
+Valid until: ${f.validTo||''}
+Examiner / date: ${f.examiner||''} ${f.issueDate||''}
+${conf?'6-month confirmations on the copy we received:\n'+conf+'\n':''}
+Please confirm in particular which employer is stated on the original certificate. A copy of the certificate we received is attached.
+
+Kind regards
+${[SET.checker,SET.company].filter(Boolean).join('\n')}`;
+  location.href=`mailto:${encodeURIComponent(f.issuerEmail||'')}?subject=${encodeURIComponent('Verification request – welder certificate '+(f.certNo||''))}&body=${encodeURIComponent(body)}`;
+}
+
+/* ================= udskrift og eksport ================= */
+function printStatements(list){
+  if(!list.length){toast('Der er ingen certifikater at udskrive.');return}
+  $('printArea').innerHTML=list.map(it=>`<div class="stmt">${statement(it,it.lang).html}</div>`).join('');
+  setTimeout(()=>window.print(),60);
+}
+$('btnPrintAll').onclick=()=>{const q=norm($('q').value);printStatements(ITEMS.filter(it=>{const v=evaluate(it);const isF=v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder';
+  if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
+  return FILTER==='all'||(FILTER==='fraud'&&isF)||(FILTER==='bad'&&v.cls==='bad'&&!isF)||(FILTER==='ok'&&v.cls==='ok')||(FILTER==='warn'&&v.cls==='warn')}))};
+$('btnCsv').onclick=()=>{
+  const cols=['Resultat','Svejser','Fødselsdato','Cert.-nr.','Udsteder','Arbejdsgiver','Betegnelse','Gyldig fra','Gyldig til','Seneste underskrift','Næste underskrift senest','Antal underskrifter','Fund','Fil'];
+  const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
+  const lines=ITEMS.map(it=>{const v=evaluate(it),s=v.sig;return[v.big,it.f.name,it.f.dob,it.f.certNo,it.f.issuer,it.f.employer,it.f.designation,it.f.testDate,s.end?iso(s.end):'',s.last?iso(s.last):'',s.nextDue?iso(s.nextDue):'',it.conf.length,v.A.filter(a=>a.lvl!=='ok').map(a=>a.t).join(' | '),it.file.name].map(q).join(';')});
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+[cols.map(q).join(';'),...lines].join('\r\n')],{type:'text/csv'}));a.download=`svejsercertifikater-${today()}.csv`;a.click();
+};
+$('btnBackup').onclick=async()=>{
+  toast('Laver backup …');const out=[];
+  for(const it of ITEMS){const b=await dbBlob(it.id);const data=b?await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(b)}):null;out.push({item:it,file:data})}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({app:'verif9606',v:2,at:new Date().toISOString(),items:out})],{type:'application/json'}));a.download=`verifikator-backup-${today()}.json`;a.click();
+};
+$('btnRestore').onclick=()=>$('fileRestore').click();
+$('fileRestore').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const j=JSON.parse(await f.text());if(j.app!=='verif9606'||!Array.isArray(j.items))throw new Error('ukendt format');let n=0;
+    for(const {item,file} of j.items){if(!item||!item.id||ITEMS.some(x=>x.id===item.id||x.file.hash===item.file.hash))continue;if(file){const b=await (await fetch(file)).blob();await dbBlobPut(item.id,b)}await dbPut(item);ITEMS.push(item);n++}
+    renderList();toast(`${n} certifikater gendannet. Eksisterende er bevaret.`)}catch(err){toast('Filen kunne ikke gendannes: '+err.message)}
+};
+
+/* ================= start ================= */
+(async()=>{
+  showAi();
+  try{await dbOpen();ITEMS=(await dbAll()).sort((a,b)=>b.added.localeCompare(a.added))}catch(e){toast('Browseren tillader ikke lokal lagring. Listen gemmes ikke.')}
+  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
+  renderList();
+})();
+</script>
+</body>
+</html>
