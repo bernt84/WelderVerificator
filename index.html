@@ -160,10 +160,11 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
   <h2>Indstillinger</h2>
   <label>Kontrolleret af (bruges i statements)<input id="setChecker"></label>
   <label>Firma (bruges i statements)<input id="setCompany"></label>
-  <label>Anthropic API-nøgle til AI-aflæsning<input id="setKey" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
+  <label>Aflæsning af certifikater<select id="setReader"><option value="free">Gratis tekstgenkendelse i browseren (standard)</option><option value="ai">Claude (kræver egen API-nøgle)</option></select></label>
+  <label>Anthropic API-nøgle (kun til Claude-aflæsning)<input id="setKey" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
   <label>Model<input id="setModel"></label>
-  <label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="setAuto" style="width:18px;height:18px"> Aflæs automatisk nye certifikater med AI</label>
-  <p class="hint">Nøglen gemmes kun i denne browser. Uden nøgle indtaster du selv oplysningerne under hvert certifikat.</p>
+  <label style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" id="setAuto" style="width:18px;height:18px"> Aflæs nye certifikater automatisk</label>
+  <p class="hint">Den gratis tekstgenkendelse kører i browseren og kræver ingen nøgle. Claude læser også håndskrevne datoer, men kræver din egen API-nøgle, som kun gemmes i denne browser.</p>
   <div class="row" style="justify-content:flex-end"><button class="btn del" id="btnWipe">Slet hele listen</button><button class="btn pri" id="btnSetOk">Gem</button></div>
 </dialog>
 
@@ -178,11 +179,15 @@ function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';cle
 
 /* ================= indstillinger ================= */
 const SET_KEY='verif9606.settings';
-let SET=Object.assign({checker:'',company:'',key:'',model:'claude-sonnet-5',auto:true},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
+let SET=Object.assign({checker:'',company:'',key:'',model:'claude-sonnet-5',auto:true,reader:'free'},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
 function saveSet(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET))}catch(e){}showAi()}
-function showAi(){$('aiState').textContent=SET.key?'AI-aflæsning slået til':'AI-aflæsning ikke sat op'}
-$('btnSettings').onclick=()=>{$('setChecker').value=SET.checker;$('setCompany').value=SET.company;$('setKey').value=SET.key;$('setModel').value=SET.model;$('setAuto').checked=SET.auto;$('dlgSet').showModal()};
-$('btnSetOk').onclick=()=>{SET.checker=$('setChecker').value.trim();SET.company=$('setCompany').value.trim();SET.key=$('setKey').value.trim();SET.model=$('setModel').value.trim()||'claude-sonnet-5';SET.auto=$('setAuto').checked;saveSet();$('dlgSet').close();renderList()};
+const useAI=()=>SET.reader==='ai'&&!!SET.key;
+function showAi(){$('aiState').textContent=useAI()?'Aflæsning: Claude':'Aflæsning: gratis tekstgenkendelse'}
+function readItem(id){useAI()?aiQueue(id):ocrQueue(id)}
+$('btnSettings').onclick=()=>{$('setReader').value=SET.reader;$('setChecker').value=SET.checker;$('setCompany').value=SET.company;$('setKey').value=SET.key;$('setModel').value=SET.model;$('setAuto').checked=SET.auto;$('dlgSet').showModal()};
+$('btnSetOk').onclick=()=>{SET.checker=$('setChecker').value.trim();SET.company=$('setCompany').value.trim();SET.key=$('setKey').value.trim();SET.model=$('setModel').value.trim()||'claude-sonnet-5';SET.auto=$('setAuto').checked;SET.reader=$('setReader').value;
+  if(SET.reader==='ai'&&!SET.key){SET.reader='free';toast('Uden API-nøgle bruges den gratis tekstgenkendelse.')}
+  saveSet();$('dlgSet').close();renderList()};
 $('btnWipe').onclick=async()=>{if(!confirm('Slet alle certifikater og resultater i listen? Det kan ikke fortrydes.'))return;await dbClear();ITEMS=[];$('dlgSet').close();renderList()};
 
 /* ================= IndexedDB ================= */
@@ -303,7 +308,7 @@ async function runQ(){
       const it=newItem(f,hash);
       await dbBlobPut(it.id,new Blob([buf],{type:f.type||(/\.pdf$/i.test(f.name)?'application/pdf':'')}));
       await inspect(it);ITEMS.unshift(it);await dbPut(it);renderList();
-      if(SET.key&&SET.auto)aiQueue(it.id);else ocrQueue(it.id);
+      if(SET.auto)readItem(it.id);
     }catch(e){console.error(e);toast(`${f.name} kunne ikke læses: ${e.message||e}`)}
   }
   $('queue').textContent='';qBusy=false;
@@ -353,7 +358,7 @@ async function aiRead(id){
   save(it);renderList();
 }
 $('btnAiAll').onclick=()=>{
-  if(SET.key){const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst med AI.');return}todo.forEach(x=>aiQueue(x.id))}
+  if(useAI()){const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst med Claude.');return}todo.forEach(x=>aiQueue(x.id))}
   else{const todo=ITEMS.filter(x=>x.ocr.status!=='done'&&x.ocr.status!=='running'&&x.ocr.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst.');return}todo.forEach(x=>ocrQueue(x.id))}};
 
 /* ================= tekstgenkendelse (gratis, i browseren) ================= */
@@ -592,8 +597,11 @@ const EN_FLAG={f1:'a field has a different font, size or position',f2:'remains o
 function statement(it,lang){
   const v=evaluate(it),f=it.f,da=lang!=='en';
   const L=(a,b)=>da?a:b;
-  const who=[f.name||L('ukendt svejser','unknown welder'),f.dob?`(${L('f.','born')} ${da?fmt(f.dob):f.dob})`:''].join(' ');
-  const intro=L(
+  const who=[f.name||L('ukendt svejser','unknown welder'),f.dob?`(${L('f.','born')} ${da?fmt(f.dob):f.dob})`:''].filter(Boolean).join(' ');
+  const bare=!f.certNo&&!f.name&&!f.testDate&&!f.employer;
+  const intro=bare?L(
+    `Oplysningerne er ikke aflæst fra certifikatet endnu. Kør aflæsningen, eller udfyld felterne, før certifikatet kan vurderes.${it.file?' Fil: '+esc(it.file.name)+'.':''}`,
+    `The certificate has not been read yet. Run the reading or fill in the fields before the certificate can be assessed.${it.file?' File: '+esc(it.file.name)+'.':''}`):L(
     `Certifikat ${esc(f.certNo||'uden nummer')}${f.standard?' efter '+esc(f.standard):''}${f.issuer?', udstedt af '+esc(f.issuer):''}${f.issueDate?' den '+fmt(f.issueDate):''}, til ${esc(who)}. Arbejdsgiver på certifikatet: ${esc(f.employer||'ikke angivet')}.${f.designation?' Betegnelse: '+esc(f.designation)+'.':''}`,
     `Certificate ${esc(f.certNo||'without number')}${f.standard?' to '+esc(f.standard):''}${f.issuer?', issued by '+esc(f.issuer):''}${f.issueDate?' on '+f.issueDate:''}, for ${esc(who)}. Employer stated on the certificate: ${esc(f.employer||'not stated')}.${f.designation?' Designation: '+esc(f.designation)+'.':''}`);
   const conclTxt={bad:{'Mulig forfalskning':L('Konklusion: Certifikatet er muligvis forfalsket eller ændret. Det må ikke anvendes, før udstederen har bekræftet det.','Conclusion: The certificate is possibly forged or altered. It must not be used until the issuer has confirmed it.'),'Afvist af udsteder':L('Konklusion: Udstederen har ikke kunnet bekræfte certifikatet. Det må ikke anvendes.','Conclusion: The issuer could not confirm the certificate. It must not be used.'),'Ikke gyldigt':L('Konklusion: Certifikatet er ikke gyldigt i dag.','Conclusion: The certificate is not valid today.'),'Utilstrækkelig prøvning':L('Konklusion: De registrerede prøvninger opfylder ikke kravene i ISO 9606-1, afsnit 6.4. Certifikatet kan ikke godkendes.','Conclusion: The recorded tests do not meet the requirements of ISO 9606-1, clause 6.4. The certificate cannot be accepted.')},
@@ -742,9 +750,9 @@ function bodyEl(it){
       <div class="stmt" data-stmt>${statement(it,it.lang).html}</div>
     </div>
     <div class="box"><h3>Automatiske fund</h3><div class="alerts" data-alerts>${alertsHTML(v)}</div></div>
-    <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><div class="row"><button class="btn sm" data-ocr>${it.ocr&&it.ocr.status==='done'?'Læs teksten igen':'Læs teksten'}</button><button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med AI':'Aflæs med AI'}</button></div></div>
+    <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><div class="row"><button class="btn sm" data-ocr>${it.ocr&&it.ocr.status==='done'?'Læs teksten igen':'Læs teksten'}</button>${SET.key?`<button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med Claude':'Aflæs med Claude'}</button>`:''}</div></div>
       ${it.ocr&&it.ocr.status==='error'?`<div class="al bad" style="margin:8px 0">Tekstlæsningen fejlede: ${esc(it.ocr.error||'')}</div>`:''}
-      ${it.ocr&&it.ocr.status==='done'&&it.ai.status!=='done'?'<p class="hint">Udfyldt med tekstgenkendelse. Kontrollér værdierne mod certifikatet. Håndskrift kan ikke læses, så 6-måneders underskrifter skal indtastes.</p>':''}
+      ${it.ocr&&it.ocr.status==='done'&&it.ai.status!=='done'?'<p class="hint">Udfyldt med den gratis tekstgenkendelse. Kontrollér værdierne mod certifikatet. Håndskrift kan ikke læses, så 6-måneders underskrifter skal indtastes.</p>':''}
       ${it.ai.status==='error'?`<div class="al bad" style="margin:8px 0">AI-aflæsningen fejlede: ${esc(it.ai.error)}</div>`:''}
       ${it.ai.status==='done'?'<p class="hint">Aflæst med AI. Kontrollér værdierne mod certifikatet, især håndskrevne datoer.</p>':''}
       <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}"></label>`).join('')}</div>
@@ -803,7 +811,7 @@ function bodyEl(it){
   q('[data-copy]').onclick=async()=>{const t=q('[data-stmt]').innerText;try{await navigator.clipboard.writeText(t);toast('Statement kopieret.')}catch(e){toast('Kunne ikke kopiere. Markér teksten og kopiér manuelt.')}};
   q('[data-print]').onclick=()=>printStatements([it]);
   q('[data-ocr]').onclick=()=>{if(it.ocr&&it.ocr.status==='done'&&!confirm('Læs teksten igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;ocrQueue(it.id)};
-  q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
+  if(q('[data-ai]'))q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
   q('[data-cmpgo]').onclick=async()=>{const o=ITEMS.find(x=>x.id===q('[data-cmpsel]').value);if(!o)return;q('[data-crops]').innerHTML='<p class="hint">Sammenligner …</p>';await new Promise(r=>setTimeout(r,20));try{await compare(it,o)}catch(e){toast('Sammenligningen fejlede: '+e.message)}renderList()};
   q('[data-mail]').onclick=()=>mailIssuer(it);
   q('[data-search]').onclick=()=>window.open('https://www.google.com/search?q='+encodeURIComponent(`${it.f.issuer||''} welder qualification certificate verification`),'_blank','noopener');
@@ -868,7 +876,7 @@ $('fileRestore').onchange=async e=>{
   try{await dbOpen();ITEMS=(await dbAll()).sort((a,b)=>b.added.localeCompare(a.added))}catch(e){toast('Browseren tillader ikke lokal lagring. Listen gemmes ikke.')}
   ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};it.ocr=it.ocr||{status:'none',text:''};if(it.ocr.status==='running'||it.ocr.status==='queued')it.ocr.status='none';if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
   renderList();
-  ITEMS.filter(it=>!Object.values(it.f).some(Boolean)&&it.ai.status!=='done'&&it.ocr.status==='none').forEach(it=>{if(SET.key&&SET.auto)aiQueue(it.id);else ocrQueue(it.id)});
+  ITEMS.filter(it=>!Object.values(it.f).some(Boolean)&&it.ai.status!=='done'&&it.ocr.status==='none').forEach(it=>{readItem(it.id)});
 })();
 </script>
 </body>
