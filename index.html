@@ -48,15 +48,17 @@ input,select,textarea{background:var(--bg);border:1px solid var(--line);color:va
 .list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .it{border-bottom:1px solid var(--line);background:var(--bg2)}
 .it:last-child{border-bottom:none}
-.head{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 170px 24px;gap:12px;align-items:center;padding:8px 12px;width:100%;text-align:left;background:none;border:none;color:inherit}
+.head{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;cursor:pointer;gap:12px;align-items:center;padding:8px 12px;width:100%;text-align:left;background:none;border:none;color:inherit}
 .head:hover{background:var(--bg3)}
 .head img{width:54px;height:72px;object-fit:cover;object-position:top;border-radius:2px;background:#fff}
 .head .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head .who span,.head .col span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head .col{font-size:13px}
+.akt{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dim);cursor:pointer}
+.akt input{width:16px;height:16px;accent-color:var(--lime);margin:0}
 .head .car{color:var(--dim);transition:transform .15s}
 .it.open .car{transform:rotate(90deg)}
-.lh{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 170px 24px;gap:12px;padding:6px 12px;font-size:12px;color:var(--dim);background:var(--bg3);border-bottom:1px solid var(--line)}
+.lh{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;gap:12px;padding:6px 12px;font-size:12px;color:var(--dim);background:var(--bg3);border-bottom:1px solid var(--line)}
 @media (max-width:900px){.head{grid-template-columns:44px 1fr auto;}.head img{width:44px;height:58px}.head .col,.head .car,.lh{display:none}.head .stat{grid-column:2/4}}
 .tag{font-family:'Space Mono',monospace;font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--dim);white-space:nowrap;display:inline-block}
 .tag.ok{color:var(--ok);border-color:#2f6b49}.tag.bad{color:var(--bad);border-color:#7a3530}.tag.warn{color:var(--warn);border-color:#7a5d24}
@@ -105,6 +107,7 @@ details.dd summary{cursor:pointer;font-weight:800;font-size:15px}
 dialog{background:var(--bg2);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);max-width:520px;width:calc(100% - 32px)}
 dialog::backdrop{background:rgba(0,0,0,.6)}
 dialog h2{margin:0 0 10px;font-size:18px}
+dialog::backdrop{cursor:pointer}
 dialog label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--dim);margin-bottom:10px}
 footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);font-size:12px}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--bg3);border:1px solid var(--line);padding:8px 14px;border-radius:4px;font-size:13px;z-index:50;display:none}
@@ -144,7 +147,8 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
     <div class="chips" id="chips"></div>
     <span class="sp" style="margin-left:auto"></span>
     <button class="btn" id="btnAiAll">Aflæs alle</button>
-    <button class="btn" id="btnPrintAll">Udskriv statements</button>
+    <button class="btn" id="btnSignAll">Underskriv forfaldne (§9.2)</button>
+    <button class="btn" id="btnPrintAll">Udskriv rapporter</button>
     <button class="btn" id="btnCsv">Eksportér liste (CSV)</button>
     <button class="btn" id="btnBackup">Backup</button>
     <button class="btn" id="btnRestore">Gendan</button>
@@ -157,9 +161,13 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
 <footer>Værktøjet er en hjælp til kontrollen og erstatter ikke fagligt skøn. Filer og data gemmes kun i denne browser. Ved AI-aflæsning sendes sidebillederne til Anthropic med jeres egen API-nøgle. Certifikater indeholder persondata, så gem kun det, I har brug for.</footer>
 
 <dialog id="dlgSet">
-  <h2>Indstillinger</h2>
-  <label>Kontrolleret af (bruges i statements)<input id="setChecker"></label>
-  <label>Firma (bruges i statements)<input id="setCompany"></label>
+  <div class="row" style="justify-content:space-between;align-items:flex-start"><h2 style="flex:1">Indstillinger</h2>
+    <button class="btn sm" id="btnSetClose" aria-label="Luk" title="Luk uden at gemme" style="font-size:16px;line-height:1;padding:4px 10px">✕</button></div>
+  <label>Dit navn (bruges ved underskrift og på rapporter)<input id="setChecker"></label>
+  <label>Stilling<input id="setTitle" placeholder="fx svejsekoordinator"></label>
+  <label>Firma<input id="setCompany"></label>
+  <label>Din underskrift (billede, PNG eller JPG med hvid/gennemsigtig baggrund)<input type="file" id="setSignFile" accept="image/*"></label>
+  <div class="row" id="signPrev" style="margin:-4px 0 10px"></div>
   <label>Aflæsning af certifikater<select id="setReader"><option value="free">Gratis tekstgenkendelse i browseren (standard)</option><option value="ai">Claude (kræver egen API-nøgle)</option></select></label>
   <label>Anthropic API-nøgle (kun til Claude-aflæsning)<input id="setKey" type="password" placeholder="sk-ant-..." autocomplete="off"></label>
   <label>Model<input id="setModel"></label>
@@ -179,15 +187,24 @@ function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';cle
 
 /* ================= indstillinger ================= */
 const SET_KEY='verif9606.settings';
-let SET=Object.assign({checker:'',company:'',key:'',model:'claude-sonnet-5',auto:true,reader:'free'},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
+let SET=Object.assign({checker:'',title:'',company:'',key:'',model:'claude-sonnet-5',auto:true,reader:'free',signImg:''},JSON.parse(localStorage.getItem(SET_KEY)||'{}'));
 function saveSet(){try{localStorage.setItem(SET_KEY,JSON.stringify(SET))}catch(e){}showAi()}
 const useAI=()=>SET.reader==='ai'&&!!SET.key;
 function showAi(){$('aiState').textContent=useAI()?'Aflæsning: Claude':'Aflæsning: gratis tekstgenkendelse'}
 function readItem(id){useAI()?aiQueue(id):ocrQueue(id)}
-$('btnSettings').onclick=()=>{$('setReader').value=SET.reader;$('setChecker').value=SET.checker;$('setCompany').value=SET.company;$('setKey').value=SET.key;$('setModel').value=SET.model;$('setAuto').checked=SET.auto;$('dlgSet').showModal()};
-$('btnSetOk').onclick=()=>{SET.checker=$('setChecker').value.trim();SET.company=$('setCompany').value.trim();SET.key=$('setKey').value.trim();SET.model=$('setModel').value.trim()||'claude-sonnet-5';SET.auto=$('setAuto').checked;SET.reader=$('setReader').value;
+$('btnSettings').onclick=()=>{$('setReader').value=SET.reader;$('setTitle').value=SET.title||'';signPrev();$('setChecker').value=SET.checker;$('setCompany').value=SET.company;$('setKey').value=SET.key;$('setModel').value=SET.model;$('setAuto').checked=SET.auto;$('dlgSet').showModal()};
+function signPrev(){$('signPrev').innerHTML=SET.signImg?`<img src="${SET.signImg}" alt="Underskrift" style="max-height:60px;background:#fff;border-radius:3px;padding:2px"><button class="btn sm del" id="signDel">Fjern underskrift</button>`:'<span class="hint">Ingen underskrift gemt.</span>';
+  if($('signDel'))$('signDel').onclick=()=>{SET.signImg='';saveSet();signPrev()}}
+$('setSignFile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{const url=URL.createObjectURL(f),img=await new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=url});
+    const c=document.createElement('canvas'),W=Math.min(500,img.width);c.width=W;c.height=Math.round(img.height*W/img.width);
+    const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);
+    SET.signImg=c.toDataURL('image/jpeg',.85);URL.revokeObjectURL(url);saveSet();signPrev()}catch(err){toast('Billedet kunne ikke læses.')}};
+$('btnSetOk').onclick=()=>{SET.title=$('setTitle').value.trim();SET.checker=$('setChecker').value.trim();SET.company=$('setCompany').value.trim();SET.key=$('setKey').value.trim();SET.model=$('setModel').value.trim()||'claude-sonnet-5';SET.auto=$('setAuto').checked;SET.reader=$('setReader').value;
   if(SET.reader==='ai'&&!SET.key){SET.reader='free';toast('Uden API-nøgle bruges den gratis tekstgenkendelse.')}
   saveSet();$('dlgSet').close();renderList()};
+$('btnSetClose').onclick=()=>$('dlgSet').close();
+$('dlgSet').addEventListener('click',e=>{if(e.target===$('dlgSet'))$('dlgSet').close()});
 $('btnWipe').onclick=async()=>{if(!confirm('Slet alle certifikater og resultater i listen? Det kan ikke fortrydes.'))return;await dbClear();ITEMS=[];$('dlgSet').close();renderList()};
 
 /* ================= IndexedDB ================= */
@@ -215,12 +232,6 @@ const FIELDS=[
  ['examiner','Eksaminator'],['restrictions','Begrænsninger i anvendelse'],
  ['verifyUrl','QR-kode eller verifikationslink','text','full']
 ];
-const CHECKS=[
- {g:'Dokument og udsteder',items:[['d1','Udstederen er identificeret med navn og kontaktoplysninger'],['d2','Certifikat-nr. er ens på alle sider'],['d3','Alle sider er med'],['d4','Eksaminatorens navn, dato og underskrift er til stede'],['d5','Udstederens stempel eller segl er til stede']]},
- {g:'Svejseren',items:[['w1','Foto, navn og fødselsdato er angivet'],['w2','Identifikationsmetoden er angivet'],['w3','Svejseren har vist gyldigt ID, og det passer med certifikatet'],['w4','Arbejdsgiveren passer med dem, der sendte certifikatet']]},
- {g:'Prøvning og kvalifikation',items:[['q1','Betegnelsen stemmer med prøvedetaljerne'],['q2','Gyldighedsområdet følger reglerne i ISO 9606-1'],['q3','Prøvningen er udført og accepteret som krævet i afsnit 6.4'],['q4','Prøverapporterne har nummer og dato'],['q5','Gyldighedsområdet og eventuelle begrænsninger dækker opgaven']]},
- {g:'Tegn på forfalskning',flag:true,items:[['f1','Forskellig skrifttype, størrelse eller placering i et felt'],['f2','Rester af slettet tekst, hvide felter eller pletter'],['f3','Stempel, segl eller underskrift ser kopieret eller indsat ud'],['f4','Underskrifterne for 6-måneders bekræftelse ser ens ud eller er lavet på én gang']]}
-];
 const EDIT_TOOLS=/ilovepdf|smallpdf|sejda|pdf24|pdfescape|pdffiller|photoshop|gimp|canva|pixlr|paint|affinity|inkscape|pdfelement|docfly|lightpdf|sodapdf|pdfcandy|pdf candy|microsoft word|libreoffice|openoffice|nitro/i;
 const SCANNERS=/ricoh|canon|xerox|konica|minolta|kyocera|sharp|brother|epson|toshiba|lexmark|hewlett|\bhp\b|océ|olivetti|develop|scan/i;
 const PHONE_W=[720,750,828,1080,1125,1170,1179,1206,1242,1284,1290,1320,1440];
@@ -240,7 +251,7 @@ function cnpCheck(v){v=(v||'').replace(/\s/g,'');if(!/^[1-8]\d{12}$/.test(v))ret
 
 /* ================= state ================= */
 let ITEMS=[];let FILTER='all';const OPEN=new Set();
-function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],tests:{},supp:'',spec:{},c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},ocr:{status:'none',text:''},cmp:{},lang:'da'}}
+function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},active:true,conf:[],reval:[],tests:{},supp:'',spec:{},notes:'',ai:{status:'none',anomalies:[],error:''},ocr:{status:'none',text:''},cmp:{},lang:'da'}}
 
 /* ================= PDF/billede ================= */
 const docCache=new Map();
@@ -377,12 +388,13 @@ async function ocrPump(){
   while(OQ.length){const id=OQ.shift(),it=ITEMS.find(x=>x.id===id);if(!it)continue;
     it.ocr.status='running';renderHead(it);
     try{const w=await tessWorker(),d=await getDoc(id),parts=[];
-      const raw=[];
+      const raw=[],boxes={};
       for(let p=1;p<=Math.min(d.n,2);p++){
         const c=await renderPage(id,p,2200);
         if(p===1){const r0=await w.recognize(c,{},{text:true,blocks:true});raw.push(rowsFromOCR(r0.data))}
-        const r=await w.recognize(cleanForOCR(c),{},{text:true,blocks:true});parts.push(rowsFromOCR(r.data))}
-      it.ocr={status:'done',text:parts.join('\n=====\n'),at:new Date().toISOString()};
+        const r=await w.recognize(cleanForOCR(c),{},{text:true,blocks:true});parts.push(rowsFromOCR(r.data));
+        boxes[p]=headWords(r.data,c.width)}
+      it.ocr={status:'done',text:parts.join('\n=====\n'),boxes,at:new Date().toISOString()};
       const A=parseOCR(parts),B=parseOCR([raw[0],parts[1]||'']);
       Object.keys(B.f).forEach(k=>{if(!A.f[k])A.f[k]=B.f[k]});
       {const fn=A.nm.fn||B.nm.fn,ln=A.nm.ln||B.nm.ln;if(fn&&ln)A.f.name=tcase(fn+' '+ln)}Object.keys(B.tests).forEach(k=>{if(!A.tests[k])A.tests[k]=B.tests[k]});if(!A.supp)A.supp=B.supp;
@@ -400,6 +412,12 @@ function cleanForOCR(c){
   const ld=dilate(l,w,h,1);
   for(let i=0,j=0;i<m.length;i++,j+=4){const v=ld[i]?255:(d[j]*.3+d[j+1]*.59+d[j+2]*.11);d[j]=d[j+1]=d[j+2]=v}
   ctx.putImageData(img,0,0);return c}
+// gemmer positionen på de overskrifter, stemplingen skal bruge
+const HEADWORD=/^(confirmation|date|name|name,|signature|signature,|position|title|revalidation|employer|supervisor)$/i;
+function headWords(data,w){const out=[];
+  (data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>{
+    const t=(wd.text||'').trim();if(t&&HEADWORD.test(t)&&wd.confidence>50)out.push({t:t.toLowerCase().replace(/[,.]$/,''),x:wd.bbox.x0,y:wd.bbox.y0,x1:wd.bbox.x1,y1:wd.bbox.y1})}))));
+  return{w,words:out}}
 // samler ord til linjer efter deres lodrette placering, uanset tekstblokke
 function rowsFromOCR(data){
   const words=[];(data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>{if(wd.text&&wd.text.trim())words.push({t:wd.text,x0:wd.bbox.x0,x1:wd.bbox.x1,y0:wd.bbox.y0,y1:wd.bbox.y1})}))));
@@ -565,7 +583,9 @@ function evaluate(it){
     if(iss&&iss<start)A.push({lvl:'bad',fraud:true,t:'Certifikatet er udstedt før prøvedatoen.',en:'The certificate is issued before the test date.'});
   }
   if(iss&&iss>now)A.push({lvl:'bad',fraud:true,t:'Udstedelsesdatoen ligger i fremtiden.',en:'The issue date is in the future.'});
-  it.conf.forEach(c=>{const d=D(c.date);if(d&&d>now)A.push({lvl:'bad',fraud:true,t:`En 6-måneders underskrift er dateret i fremtiden (${fmt(d)}).`,en:`A 6-month signature is dated in the future (${iso(d)}).`})});
+  it.conf.forEach(c=>{const d=D(c.date);if(!d||d<=now)return;
+    if(c.signedAt)A.push({lvl:'ok',t:`Underskriften ${fmt(d)} er sat på forhånd (stemplet ${fmt(c.signedAt)}) og gælder frem til den dato.`,en:`The signature dated ${iso(d)} was stamped in advance on ${c.signedAt}.`});
+    else A.push({lvl:'bad',fraud:true,t:`En 6-måneders underskrift er dateret i fremtiden (${fmt(d)}).`,en:`A 6-month signature is dated in the future (${iso(d)}).`})});
   const c=cnpCheck(f.idNo);
   if(c){if(!c.valid)A.push({lvl:'bad',fraud:true,t:'Det rumænske personnummer (CNP) har forkert kontrolciffer.',en:'The Romanian personal number (CNP) has an invalid check digit.'});
     else if(f.dob&&f.dob!==c.dob)A.push({lvl:'bad',fraud:true,t:`Personnummeret (CNP) passer til fødselsdato ${fmt(c.dob)}, ikke den angivne.`,en:`The personal number (CNP) matches date of birth ${c.dob}, not the one stated.`});
@@ -574,69 +594,186 @@ function evaluate(it){
   if(f.restrictions)A.push({lvl:'warn',t:`Begrænsning: ${f.restrictions}`,en:`Restriction: ${f.restrictions}`});
   it.metaFlags.forEach(m=>A.push(m));
   it.ai.anomalies.forEach(a=>A.push({lvl:'warn',fraud:true,t:`AI-bemærkning: ${a}`,en:`AI observation: ${a}`}));
-  CHECKS.filter(g=>g.flag).flatMap(g=>g.items).forEach(([id,t])=>{if(it.c[id])A.push({lvl:'bad',fraud:true,t:`Observeret: ${t}.`,en:`Observed: ${EN_FLAG[id]}.`})});
   const TR=testRules(it);TR.R.forEach(a=>A.push(a));
   crossAlerts(it).forEach(a=>A.push(a));
   const fraud=A.filter(a=>a.fraud&&a.lvl!=='ok');
-  const req=CHECKS.filter(g=>!g.flag).flatMap(g=>g.items.map(i=>i[0]));const done=req.filter(id=>it.c[id]).length;
   let cls,big,en,sub='';
-  if(it.cf.no){cls='bad';big='Afvist af udsteder';en='Rejected by the issuer'}
-  else if(fraud.length&&!it.cf.ok){cls='bad';big='Mulig forfalskning';en='Possibly forged or altered'}
+  if(fraud.length){cls='bad';big='Mulig forfalskning';en='Possibly forged or altered'}
   else if(start&&blocking){cls='bad';big='Ikke gyldigt';en='Not valid'}
   else if(TR.ok===false){cls='bad';big='Utilstrækkelig prøvning';en='Insufficient testing'}
   else if(!start||TR.ok===null){cls='warn';big='Mangler data';en='Insufficient data'}
-  else{cls='ok';big=it.cf.ok?'Gyldigt, bekræftet':'Gyldigt';en=it.cf.ok?'Valid, confirmed by the issuer':'Valid'}
-  if(it.ai.status==='running')sub='Aflæses med AI …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ocr&&it.ocr.status==='running')sub='Læser teksten …';else if(it.ocr&&it.ocr.status==='queued')sub='Venter på tekstlæsning …';else if(it.ai.status==='error')sub='AI-fejl';else if(it.ocr&&it.ocr.status==='error')sub='Tekstlæsning fejlede';
-  else if(cls!=='bad'||big==='Ikke gyldigt'||big==='Utilstrækkelig prøvning')sub=`Tjekliste ${done}/${req.length}`;
-  return{A,cls,big,en,sub,sig,fraud,done,req:req.length,TR};
+  else{cls='ok';big='Gyldigt';en='Valid'}
+  if(it.ai.status==='running')sub='Aflæses med Claude …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ocr&&it.ocr.status==='running')sub='Læser teksten …';else if(it.ocr&&it.ocr.status==='queued')sub='Venter på tekstlæsning …';else if(it.ai.status==='error')sub='AI-fejl';else if(it.ocr&&it.ocr.status==='error')sub='Tekstlæsning fejlede';
+  else if(sig.nextDue&&!sig.gaps.length&&Math.abs(days(D(today()),sig.nextDue))<=SIGN_WINDOW)sub='Klar til underskrift';
+  return{A,cls,big,en,sub,sig,fraud,TR};
 }
 const iso=d=>d?new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10):'';
-const EN_FLAG={f1:'a field has a different font, size or position',f2:'remains of erased text, white patches or smudges',f3:'a stamp, seal or signature appears copied or pasted',f4:'the 6-month signatures look identical or made at the same time'};
 
-/* ================= statement ================= */
-function statement(it,lang){
-  const v=evaluate(it),f=it.f,da=lang!=='en';
-  const L=(a,b)=>da?a:b;
-  const who=[f.name||L('ukendt svejser','unknown welder'),f.dob?`(${L('f.','born')} ${da?fmt(f.dob):f.dob})`:''].filter(Boolean).join(' ');
-  const bare=!f.certNo&&!f.name&&!f.testDate&&!f.employer;
-  const intro=bare?L(
-    `Oplysningerne er ikke aflæst fra certifikatet endnu. Kør aflæsningen, eller udfyld felterne, før certifikatet kan vurderes.${it.file?' Fil: '+esc(it.file.name)+'.':''}`,
-    `The certificate has not been read yet. Run the reading or fill in the fields before the certificate can be assessed.${it.file?' File: '+esc(it.file.name)+'.':''}`):L(
-    `Certifikat ${esc(f.certNo||'uden nummer')}${f.standard?' efter '+esc(f.standard):''}${f.issuer?', udstedt af '+esc(f.issuer):''}${f.issueDate?' den '+fmt(f.issueDate):''}, til ${esc(who)}. Arbejdsgiver på certifikatet: ${esc(f.employer||'ikke angivet')}.${f.designation?' Betegnelse: '+esc(f.designation)+'.':''}`,
-    `Certificate ${esc(f.certNo||'without number')}${f.standard?' to '+esc(f.standard):''}${f.issuer?', issued by '+esc(f.issuer):''}${f.issueDate?' on '+f.issueDate:''}, for ${esc(who)}. Employer stated on the certificate: ${esc(f.employer||'not stated')}.${f.designation?' Designation: '+esc(f.designation)+'.':''}`);
-  const conclTxt={bad:{'Mulig forfalskning':L('Konklusion: Certifikatet er muligvis forfalsket eller ændret. Det må ikke anvendes, før udstederen har bekræftet det.','Conclusion: The certificate is possibly forged or altered. It must not be used until the issuer has confirmed it.'),'Afvist af udsteder':L('Konklusion: Udstederen har ikke kunnet bekræfte certifikatet. Det må ikke anvendes.','Conclusion: The issuer could not confirm the certificate. It must not be used.'),'Ikke gyldigt':L('Konklusion: Certifikatet er ikke gyldigt i dag.','Conclusion: The certificate is not valid today.'),'Utilstrækkelig prøvning':L('Konklusion: De registrerede prøvninger opfylder ikke kravene i ISO 9606-1, afsnit 6.4. Certifikatet kan ikke godkendes.','Conclusion: The recorded tests do not meet the requirements of ISO 9606-1, clause 6.4. The certificate cannot be accepted.')},
-    ok:L(`Konklusion: Certifikatet er gyldigt i dag${it.cf.ok?' og bekræftet af udstederen':''}.`,`Conclusion: The certificate is valid today${it.cf.ok?' and confirmed by the issuer':''}.`),
-    warn:L('Konklusion: Der mangler oplysninger til at vurdere certifikatet.','Conclusion: Information is missing to assess the certificate.')};
-  const concl=v.cls==='bad'?conclTxt.bad[v.big]:conclTxt[v.cls];
-  const s=v.sig;
-  const val=s.start?L(`Gyldigt fra ${fmt(s.start)}${s.end?' til '+fmt(s.end):''}${f.method?` (forlængelse efter §9.3 ${f.method})`:''}. `,`Valid from ${iso(s.start)}${s.end?' to '+iso(s.end):''}${f.method?` (revalidation per clause 9.3 ${f.method})`:''}. `):'';
-  const conf=it.conf.length?L(`6-måneders bekræftelser (§9.2): ${it.conf.map(c=>`${c.date?fmt(c.date):'ulæselig dato'}${c.name?' '+esc(c.name):''}`).join(', ')}.`,`6-month confirmations (clause 9.2): ${it.conf.map(c=>`${c.date||'unreadable date'}${c.name?' '+esc(c.name):''}`).join(', ')}.`):(s.start&&s.nextDue&&D(today())<=s.nextDue?L(`Ingen 6-måneders bekræftelser er underskrevet endnu. Det er i orden, da den første først skal underskrives senest ${fmt(s.nextDue)}.`,`No 6-month confirmations have been signed yet. This is in order, as the first one is not due until ${iso(s.nextDue)}.`):L('Ingen 6-måneders bekræftelser er underskrevet.','No 6-month confirmations have been signed.'));
-  const find=v.A.filter(a=>a.lvl!=='ok');const okf=v.A.filter(a=>a.lvl==='ok');
+/* ================= rapport til udskrift ================= */
+const SIGN_WINDOW=14;
+function signDue(it){const v=evaluate(it),s=v.sig;if(!s.start||!s.nextDue||s.gaps.length)return null;
+  if(s.end&&D(today())>s.end)return null;return s.nextDue}
+function canSignNow(it){const d=signDue(it);return d&&Math.abs(days(D(today()),d))<=SIGN_WINDOW}
+function signItem(it){
+  const d=signDue(it);if(!d)return false;
+  it.conf.push({date:iso(d),name:SET.checker||'',title:SET.title||'',img:SET.signImg||'',signedAt:today()});
+  save(it);return true}
+function report(it){
+  const v=evaluate(it),f=it.f,s=v.sig;
+  const rows=[['Resultat',v.big],['Aktiv svejser hos os',it.active?'Ja':'Nej'],['Certifikat-nr.',f.certNo],['Udsteder',f.issuer],['Sags-/filnr.',f.fileNo],['Svejser',f.name],['Fødselsdato',fmt(f.dob)],['Arbejdsgiver',f.employer],['Standard',f.standard],['Betegnelse',f.designation],['Gyldig fra',fmt(s.start)],['Gyldig til',s.end?fmt(s.end):''],['Forlængelse',f.method?'§9.3 '+f.method:''],['Seneste underskrift (§9.2)',s.last?fmt(s.last):'ingen'],['Næste underskrift senest',s.nextDue?fmt(s.nextDue):''],['Begrænsninger',f.restrictions],['Fil',`${it.file.name} (SHA-256 ${it.file.hash.slice(0,16)}…)`]].filter(([,x])=>x);
+  const find=v.A.filter(a=>a.lvl!=='ok'),okf=v.A.filter(a=>a.lvl==='ok');
   const crops=v.A.filter(a=>a.crops).flatMap(a=>a.crops);
-  let rec;
-  if(v.cls==='bad'&&(v.big==='Mulig forfalskning'))rec=L(`Kontakt ${esc(f.issuer||'udstederen')} og få bekræftet certifikatets ægthed og indhold, især arbejdsgiveren. Brug kontaktoplysninger fra udstederens officielle hjemmeside. Svejseren må ikke svejse på certifikatet, før det er bekræftet.`,`Contact ${esc(f.issuer||'the issuer')} to confirm the authenticity and content of the certificate, in particular the employer. Use contact details from the issuer's official website. The welder must not weld under this certificate until it is confirmed.`);
-  else if(v.big==='Utilstrækkelig prøvning')rec=L('Få dokumentation for de manglende prøvninger fra udstederen, eller lad svejseren tage en ny prøve.','Obtain documentation of the missing tests from the issuer, or have the welder take a new test.');
-  else if(v.big==='Ikke gyldigt')rec=L('Svejseren skal have certifikatet forlænget eller tage en ny prøve, før der svejses på det.','The welder must have the certificate revalidated or take a new test before welding under it.');
-  else if(v.cls==='ok')rec=L(`Næste 6-måneders bekræftelse skal underskrives senest ${fmt(s.nextDue)}. Kontrollér at gyldighedsområdet dækker opgaven.`,`The next 6-month confirmation must be signed by ${iso(s.nextDue)}. Check that the range of qualification covers the work.`);
-  else rec=L('Udfyld de manglende oplysninger, eller aflæs certifikatet med AI.','Complete the missing information or read the certificate with AI.');
-  const by=[SET.checker,SET.company].filter(Boolean).join(', ');
-  return{cls:v.cls,html:`<h4>${L('Statement: kontrol af svejsercertifikat','Statement: welder certificate verification')}</h4>
-  <p>${intro}</p>
-  <div class="concl ${v.cls}">${concl}</div>
-  <p>${val}${conf}</p>
-  ${testsLine(it,da)}
-  ${find.length?`<p><b>${L('Fund','Findings')}</b></p><ul>${find.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
-  ${okf.length?`<p><b>${L('Kontrolleret uden bemærkninger','Checked without remarks')}</b></p><ul>${okf.map(a=>`<li>${esc(da?a.t:(a.en||a.t))}</li>`).join('')}</ul>`:''}
-  ${crops.map(c=>`<figure style="margin:6px 0"><figcaption style="font-size:12px">${esc(da?c.cap:c.capEn)}</figcaption><img src="${c.a}"><img src="${c.b}"></figure>`).join('')}
-  <p><b>${L('Anbefaling','Recommendation')}:</b> ${rec}</p>
-  ${it.cf.ok?`<p>${L('Bekræftet af udsteder','Confirmed by the issuer')} ${esc(it.cf.date)} ${esc(it.cf.by)}.</p>`:''}
-  ${it.notes?`<p>${esc(it.notes)}</p>`:''}
-  <p style="font-size:12px;color:#555">${L('Kontrolleret','Checked')} ${da?fmt(today()):today()}${by?` ${L('af','by')} ${esc(by)}`:''}. ${L('Fil','File')}: ${esc(it.file.name)}, SHA-256 ${esc(it.file.hash.slice(0,16))}…</p>`};
+  return `<h1>Kontrol af svejsercertifikat (ISO 9606-1)</h1>
+  <p>${esc(f.name||it.file.name)}${f.certNo?' · '+esc(f.certNo):''} · ${esc(v.big)}</p>
+  <table>${rows.map(([k,x])=>`<tr><th>${esc(k)}</th><td>${esc(x)}</td></tr>`).join('')}</table>
+  <h2>Info</h2><ul>${[...find,...okf].map(a=>`<li>${esc(a.t)}</li>`).join('')||'<li>Ingen</li>'}</ul>
+  ${testsLine(it,true)}
+  <h2>6-måneders underskrifter (§9.2)</h2>
+  <table><tr><th>Dato</th><th>Navn</th><th>Stilling</th><th>Underskrift</th></tr>
+  ${it.conf.length?it.conf.map(c=>`<tr><td>${esc(c.date?fmt(c.date):'')}</td><td>${esc(c.name||'')}</td><td>${esc(c.title||'')}</td><td>${c.img?`<img src="${c.img}" style="max-height:38px">`:''}${c.signedAt?`<div style="font-size:8pt">stemplet ${esc(fmt(c.signedAt))}</div>`:''}</td></tr>`).join(''):'<tr><td colspan="4">Ingen</td></tr>'}</table>
+  ${it.reval.length?`<h2>Revalidering (§9.3)</h2><table><tr><th>Dato</th><th>Gyldig til</th><th>Organ</th></tr>${it.reval.map(r=>`<tr><td>${esc(fmt(r.date))}</td><td>${esc(fmt(r.validUntil))}</td><td>${esc(r.body||'')}</td></tr>`).join('')}</table>`:''}
+  ${crops.map(c=>`<figure style="margin:6px 0"><figcaption style="font-size:9pt">${esc(c.cap)}</figcaption><img src="${c.a}"><img src="${c.b}"></figure>`).join('')}
+  ${it.notes?`<h2>Bemærkninger</h2><p>${esc(it.notes)}</p>`:''}
+  <p style="font-size:9pt;color:#555">Kontrolleret ${fmt(today())}${[SET.checker,SET.company].filter(Boolean).length?' af '+esc([SET.checker,SET.company].filter(Boolean).join(', ')):''}.</p>`;
 }
-
 function testsLine(it,da){const T=it.tests||{};const done=TESTS.filter(([k])=>T[k]&&T[k].done);if(!done.length)return'';
   const sp=specOf(it);
   return `<p>${da?'Prøvninger':'Tests'}${sp.wt?` (${sp.wt}${sp.t!=null?', t '+sp.t+' mm':''}${sp.proc?', '+(da?'proces ':'process ')+esc(sp.proc):''})`:''}: ${done.map(([k,l,en])=>`${da?l:en}${T[k].report?' '+esc(T[k].report):''}${T[k].date?' ('+(da?fmt(T[k].date):T[k].date)+')':''}`).join(', ')}${it.supp==='yes'?(da?'. Supplerende kantsømsprøve udført':'. Supplementary fillet weld test performed'):''}.</p>`}
+
+
+/* ================= stempling i PDF ================= */
+const STAMP_W=1700, PDFLIB_URL='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+async function pdfLib(){if(!window.PDFLib)await new Promise((r,j)=>{const s=document.createElement('script');s.src=PDFLIB_URL;s.onload=r;s.onerror=()=>j(new Error('pdf-lib kunne ikke hentes.'));document.head.appendChild(s)});return window.PDFLib}
+function stampPageNo(it){const t=(it.ocr&&it.ocr.text||'').split('=====');
+  for(let i=0;i<t.length;i++)if(/confirmation of qualification|following 6 months|clause 9\.?2/i.test(t[i]))return i+1;
+  return Math.min(it.pages||1,2)}
+// gråtone med lokal tærskel, så fotos også virker
+function adaptiveMask(c,off=12,r=20){
+  const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data,g=new Float32Array(w*h);
+  for(let i=0,j=0;i<g.length;i++,j+=4)g[i]=d[j]*.3+d[j+1]*.59+d[j+2]*.11;
+  const I=new Float64Array((w+1)*(h+1));
+  for(let y=0;y<h;y++){let s=0;for(let x=0;x<w;x++){s+=g[y*w+x];I[(y+1)*(w+1)+x+1]=I[y*(w+1)+x+1]+s}}
+  const m=new Uint8Array(w*h);
+  for(let y=0;y<h;y++){const y0=Math.max(0,y-r),y1=Math.min(h-1,y+r);
+    for(let x=0;x<w;x++){const x0=Math.max(0,x-r),x1=Math.min(w-1,x+r);
+      const sum=I[(y1+1)*(w+1)+x1+1]-I[y0*(w+1)+x1+1]-I[(y1+1)*(w+1)+x0]+I[y0*(w+1)+x0];
+      const n=(y1-y0+1)*(x1-x0+1);m[y*w+x]=g[y*w+x]<sum/n-off?1:0}}
+  return{w,h,m}}
+function groupIdx(idx,gap){const g=[];let cur=[];idx.forEach(y=>{if(cur.length&&y-cur[cur.length-1]<=gap)cur.push(y);else{if(cur.length)g.push(Math.round(cur.reduce((a,b)=>a+b,0)/cur.length));cur=[y]}});if(cur.length)g.push(Math.round(cur.reduce((a,b)=>a+b,0)/cur.length));return g}
+// finder §9.2-tabellens søjler (fra overskrifterne) og rækker (fra stregerne)
+function detectTable(it,page,M){
+  const {w,h,m}=M,B=it.ocr&&it.ocr.boxes&&it.ocr.boxes[page];
+  if(!B||!B.words||!B.words.length)return null;
+  const k=w/B.w,W=B.words.map(o=>({t:o.t,x:o.x*k,y:o.y*k,x1:o.x1*k,y1:o.y1*k}));
+  const conf=W.filter(o=>o.t==='confirmation').sort((a,b)=>a.y-b.y)[0];if(!conf)return null;
+  const hdr=W.filter(o=>o.y>conf.y&&o.y<conf.y+h*0.09);
+  const clx=(ws,gap)=>{const xs=ws.map(o=>o.x).sort((a,b)=>a-b),c=[];xs.forEach(x=>{if(c.length&&x-c[c.length-1].last<=gap){c[c.length-1].last=x}else c.push({x,last:x})});return c.map(o=>o.x)};
+  const gap=w*0.06;
+  const dates=clx(hdr.filter(o=>o.t==='date'),gap);
+  const names=clx(hdr.filter(o=>o.t==='name'||o.t==='signature'),gap);
+  const poss=clx(hdr.filter(o=>o.t==='position'),gap);
+  if(!dates.length||!names.length)return null;
+  const pad=w*0.012;
+  const colDate=dates[0]-pad, colName=(names.find(x=>x>colDate+pad)||names[0])-pad;
+  const colPos=(poss.find(x=>x>colName+pad)||colName+(colName-colDate)*2.2)-pad;
+  const colEnd=(dates.find(x=>x>colPos+pad)||Math.min(w-pad,colPos+(colName-colDate)*1.4+pad))-pad;
+  if(!(colDate<colName&&colName<colPos&&colPos<colEnd))return null;
+  const headBottom=Math.max(...hdr.map(o=>o.y1));
+  // vandrette streger under overskriftsrækken
+  const hl=openLine(m,w,h,Math.round(w*0.03),false);
+  const ys=[];for(let y=0;y<h;y++){let c=0;for(let x=Math.round(colDate);x<Math.min(w,Math.round(colEnd));x++)if(hl[y*w+x])c++;if(c>(colEnd-colDate)*0.35)ys.push(y)}
+  let lines=groupIdx(ys,4).filter(y=>y>headBottom+2);
+  if(lines.length<3)return null;
+  // ensartet rækkeafstand
+  const pitch=lines[1]-lines[0];const keep=[lines[0]];
+  for(let i=1;i<lines.length;i++){const d=lines[i]-keep[keep.length-1];if(Math.abs(d-pitch)<=pitch*0.35)keep.push(lines[i]);else if(d>pitch*1.5)break}
+  if(keep.length<3)return null;
+  const rows=[];for(let i=0;i<keep.length-1;i++)rows.push({y0:keep[i],y1:keep[i+1]});
+  // udfyldte rækker: blæk i dato- og navnefelt uden stregerne
+  const vl=openLine(m,w,h,Math.round(pitch*0.8),true),ink=new Uint8Array(w*h);
+  for(let i=0;i<ink.length;i++)ink[i]=m[i]&&!hl[i]&&!vl[i]?1:0;
+  rows.forEach(r=>{let c=0;for(let y=r.y0+2;y<r.y1-2;y++)for(let x=Math.round(colDate)+3;x<Math.round(colPos)-3;x++)if(ink[y*w+x])c++;
+    r.filled=c>(r.y1-r.y0)*3});
+  return{page,w,h,cols:[colDate,colName,colPos,colEnd],rows,pitch,auto:true}}
+function defaultPlan(it,page,w,h,pos){
+  const rowH=pos&&pos.rowH||h*0.022, x=pos?pos.x:w*0.08, y=pos?pos.y:h*0.35;
+  const wd=pos&&pos.cols?pos.cols:[0,w*0.12,w*0.12+w*0.33,w*0.12+w*0.33+w*0.18];
+  const rows=[];for(let i=0;i<12;i++)rows.push({y0:y+i*rowH,y1:y+(i+1)*rowH,filled:false});
+  return{page,w,h,cols:wd.map(v=>v+x),rows,pitch:rowH,auto:false}}
+async function stampPlan(it){
+  const page=(it.stampPos&&it.stampPos.page)||stampPageNo(it);
+  const c=await renderPage(it.id,page,STAMP_W);
+  let plan=null;
+  if(!it.stampPos){try{plan=detectTable(it,page,adaptiveMask(c))}catch(e){console.error(e)}}
+  if(!plan)plan=defaultPlan(it,page,c.width,c.height,it.stampPos);
+  plan.canvas=c;plan.angle=(it.stampPos&&it.stampPos.angle)||0;
+  plan.free=plan.rows.filter(r=>!r.filled);
+  return plan}
+function stampRects(it,plan){
+  const mine=it.conf.filter(c=>c.signedAt&&c.date);
+  return mine.map((c,i)=>({sig:c,row:plan.free[i]})).filter(x=>x.row)}
+async function previewStamp(it,host){
+  host.innerHTML='<p class="hint">Finder placeringen …</p>';
+  let plan;try{plan=await stampPlan(it)}catch(e){host.innerHTML=`<p class="al bad">${esc(e.message)}</p>`;return}
+  const disp=document.createElement('canvas'),W=Math.min(900,plan.w);disp.width=W;disp.height=Math.round(plan.h*W/plan.w);
+  const x=disp.getContext('2d');x.drawImage(plan.canvas,0,0,disp.width,disp.height);
+  const s=W/plan.w;
+  x.lineWidth=2;
+  stampRects(it,plan).forEach(({sig,row},i)=>{
+    x.strokeStyle='#c6f24e';x.strokeRect(plan.cols[0]*s,row.y0*s,(plan.cols[3]-plan.cols[0])*s,(row.y1-row.y0)*s);
+    x.fillStyle='rgba(198,242,78,.18)';x.fillRect(plan.cols[0]*s,row.y0*s,(plan.cols[3]-plan.cols[0])*s,(row.y1-row.y0)*s);
+    x.fillStyle='#1a5c2a';x.font=`${Math.max(9,(row.y1-row.y0)*s*.55)}px Archivo, sans-serif`;
+    x.fillText(fmt(sig.date),plan.cols[0]*s+3,row.y1*s-3);
+    x.fillText(sig.name||'',plan.cols[1]*s+3,row.y1*s-3);
+    x.fillText(sig.title||'',plan.cols[2]*s+3,row.y1*s-3)});
+  host.innerHTML='';
+  const info=document.createElement('p');info.className='hint';
+  info.textContent=plan.auto?`Tabellen er fundet automatisk på side ${plan.page} (${plan.free.length} tomme rækker). Klik på siden for at flytte stemplet.`:`Placeringen er sat manuelt på side ${plan.page}. Klik på siden for at flytte stemplet.`;
+  host.appendChild(info);host.appendChild(disp);
+  disp.style.cursor='crosshair';
+  disp.onclick=e=>{const b=disp.getBoundingClientRect();
+    const px=(e.clientX-b.left)/b.width*plan.w,py=(e.clientY-b.top)/b.height*plan.h;
+    const rowH=plan.pitch||plan.h*0.022;
+    it.stampPos={page:plan.page,x:px,y:py-rowH/2,rowH,cols:it.stampPos&&it.stampPos.cols?it.stampPos.cols:[0,plan.cols[1]-plan.cols[0],plan.cols[2]-plan.cols[0],plan.cols[3]-plan.cols[0]],angle:plan.angle};
+    save(it);previewStamp(it,host)};
+  return plan}
+async function buildStamped(it){
+  const P=await pdfLib(),plan=await stampPlan(it),rects=stampRects(it,plan);
+  if(!rects.length)throw new Error('Der er ingen underskrifter, som appen har sat. Tryk Underskriv først.');
+  const blob=await dbBlob(it.id);if(!blob)throw new Error('Filen findes ikke længere i browseren.');
+  const bytes=new Uint8Array(await blob.arrayBuffer());
+  const doc=await P.PDFDocument.load(bytes,{ignoreEncryption:true});
+  const font=await doc.embedFont(P.StandardFonts.Helvetica);
+  const pg=doc.getPages()[plan.page-1];if(!pg)throw new Error('Siden findes ikke i PDF-filen.');
+  let img=null;const src=rects.find(r=>r.sig.img);
+  if(src)img=await doc.embedJpg(await(await fetch(src.sig.img)).arrayBuffer());
+  const doc2=await getDoc(it.id),jsPage=await doc2.pdf.getPage(plan.page);
+  const v1=jsPage.getViewport({scale:1}),vp=jsPage.getViewport({scale:plan.w/v1.width});
+  const toPdf=(x,y)=>{const [a,b]=vp.convertToPdfPoint(x,y);return{x:a,y:b}};
+  // retning og målestok i PDF'ens eget koordinatsystem (siden kan være roteret)
+  const o0=toPdf(0,0),ox=toPdf(100,0);
+  const scale=Math.hypot(ox.x-o0.x,ox.y-o0.y)/100;
+  const baseAng=Math.atan2(ox.y-o0.y,ox.x-o0.x)*180/Math.PI;
+  const rot=P.degrees(baseAng+(plan.angle||0));
+  rects.forEach(({sig,row})=>{
+    const rowH=(row.y1-row.y0)*scale;
+    const size=Math.max(5,rowH*0.42);
+    const anchor=(colPx,fracUp)=>toPdf(colPx+4,row.y1-(row.y1-row.y0)*fracUp);
+    const a0=anchor(plan.cols[0],0.28),a2=anchor(plan.cols[2],0.28);
+    const col=P.rgb(0.05,0.1,0.45);
+    pg.drawText(fmt(sig.date),{x:a0.x,y:a0.y,size,font,color:col,rotate:rot});
+    if(sig.img&&img){
+      const ih=rowH*0.8,iw=Math.min(img.width/img.height*ih,(plan.cols[2]-plan.cols[1])*scale*0.55);
+      const ai=anchor(plan.cols[1],0.08);
+      pg.drawImage(img,{x:ai.x,y:ai.y,width:iw,height:ih,rotate:rot});
+      const an=anchor(plan.cols[1]+iw/scale+6,0.28);
+      pg.drawText(sig.name||'',{x:an.x,y:an.y,size:size*0.8,font,color:col,rotate:rot})}
+    else{const an=anchor(plan.cols[1],0.28);pg.drawText(sig.name||'',{x:an.x,y:an.y,size,font,color:col,rotate:rot})}
+    pg.drawText(sig.title||'',{x:a2.x,y:a2.y,size:size*0.85,font,color:col,rotate:rot})});
+  const out=await doc.save();
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'application/pdf'}));
+  a.download=it.file.name.replace(/\.pdf$/i,'')+'-underskrevet.pdf';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 
 /* ================= billedsammenligning ================= */
 function mask(c,th=140){const w=c.width,h=c.height,d=c.getContext('2d').getImageData(0,0,w,h).data,m=new Uint8Array(w*h);for(let i=0,j=0;i<m.length;i++,j+=4)m[i]=(d[j]*.3+d[j+1]*.59+d[j+2]*.11)<th?1:0;return{w,h,m}}
@@ -689,21 +826,29 @@ const ORDER={bad:0,warn:1,ok:2};
 function renderList(){
   const q=norm($('q').value);
   const ev=ITEMS.map(it=>({it,v:evaluate(it)}));
-  const counts={all:ev.length,ok:0,bad:0,fraud:0,warn:0};
-  ev.forEach(({v})=>{if(v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder')counts.fraud++;else if(v.cls==='bad')counts.bad++;else if(v.cls==='ok')counts.ok++;else counts.warn++});
-  $('chips').innerHTML=[['all','Alle'],['ok','Gyldige'],['bad','Ikke gyldige'],['fraud','Mulig forfalskning'],['warn','Mangler data']].map(([k,l])=>`<button class="chip ${FILTER===k?'on':''}" data-fl="${k}">${l}<b>${counts[k]}</b></button>`).join('');
+  const counts={all:ev.length,ok:0,bad:0,fraud:0,warn:0,sign:0,active:0};
+  ev.forEach(({it,v})=>{if(v.big==='Mulig forfalskning')counts.fraud++;else if(v.cls==='bad')counts.bad++;else if(v.cls==='ok')counts.ok++;else counts.warn++;
+    if(it.active)counts.active++;if(it.active&&canSignNow(it))counts.sign++});
+  $('chips').innerHTML=[['all','Alle'],['active','Aktive'],['sign','Til underskrift §9.2'],['ok','Gyldige'],['bad','Ikke gyldige'],['fraud','Mulig forfalskning'],['warn','Mangler data']].map(([k,l])=>`<button class="chip ${FILTER===k?'on':''}" data-fl="${k}">${l}<b>${counts[k]}</b></button>`).join('');
   $('chips').querySelectorAll('[data-fl]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.fl;renderList()});
-  const shown=ev.filter(({it,v})=>{
-    if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
-    const isF=v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder';
-    if(FILTER==='fraud')return isF;if(FILTER==='bad')return v.cls==='bad'&&!isF;if(FILTER==='ok')return v.cls==='ok';if(FILTER==='warn')return v.cls==='warn';return true;
-  }).sort((a,b)=>ORDER[a.v.cls]-ORDER[b.v.cls]||(a.it.f.name||a.it.file.name).localeCompare(b.it.f.name||b.it.file.name));
+  const shown=ev.filter(({it,v})=>matches(it,v,q)).sort((a,b)=>ORDER[a.v.cls]-ORDER[b.v.cls]||(a.it.f.name||a.it.file.name).localeCompare(b.it.f.name||b.it.file.name));
   const L=$('list');
   if(!ITEMS.length){L.innerHTML='<div class="empty">Listen er tom. Træk certifikater ind i feltet ovenfor.</div>';return}
-  L.innerHTML=`<div class="lh"><span></span><span>Svejser og certifikat</span><span>Udsteder og arbejdsgiver</span><span>Gyldig til</span><span>Næste underskrift</span><span>Resultat</span><span></span></div>`+(shown.length?'':'<div class="empty">Ingen certifikater matcher søgningen.</div>');
+  L.innerHTML=`<div class="lh"><span></span><span>Svejser og certifikat</span><span>Udsteder og arbejdsgiver</span><span>Gyldig til</span><span>Næste underskrift</span><span>Aktiv</span><span>Resultat</span><span></span></div>`+(shown.length?'':'<div class="empty">Ingen certifikater matcher søgningen.</div>');
   shown.forEach(({it})=>{const a=document.createElement('article');a.className='it'+(OPEN.has(it.id)?' open':'');a.id='it_'+it.id;L.appendChild(a);renderItem(it)});
   autoCompare();
 }
+function matches(it,v,q){
+  if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
+  const isF=v.big==='Mulig forfalskning';
+  if(FILTER==='fraud')return isF;
+  if(FILTER==='bad')return v.cls==='bad'&&!isF;
+  if(FILTER==='ok')return v.cls==='ok';
+  if(FILTER==='warn')return v.cls==='warn';
+  if(FILTER==='active')return !!it.active;
+  if(FILTER==='sign')return !!it.active&&canSignNow(it);
+  return true}
+function visibleItems(){const q=norm($('q').value);return ITEMS.filter(it=>matches(it,evaluate(it),q))}
 function headHTML(it,v){
   const s=v.sig;
   return `<img src="${it.thumb}" alt="">
@@ -711,19 +856,26 @@ function headHTML(it,v){
   <div class="col">${esc(it.f.issuer||'')}<span>${esc(it.f.employer||'')}</span></div>
   <div class="col mono">${s.end?fmt(s.end):'–'}</div>
   <div class="col mono">${s.nextDue?fmt(s.nextDue):'–'}<span>${it.conf.length} underskr.</span></div>
+  <label class="col akt" title="Aktiv svejser hos os"><input type="checkbox" data-act ${it.active?'checked':''}> Aktiv</label>
   <div class="stat"><span class="tag ${v.cls}">${esc(v.big)}</span><small>${esc(v.sub)}</small></div>
   <span class="car">▸</span>`;
 }
-function renderHead(it){const a=$('it_'+it.id);if(!a)return;const h=a.querySelector('.head');if(h)h.innerHTML=headHTML(it,evaluate(it))}
+function renderHead(it){const a=$('it_'+it.id);if(!a)return;const h=a.querySelector('.head');if(h){h.innerHTML=headHTML(it,evaluate(it));bindHead(it,a)}}
+function bindHead(it,a){
+  const h=a.querySelector('.head');
+  const toggle=()=>{if(OPEN.has(it.id))OPEN.delete(it.id);else OPEN.add(it.id);a.classList.toggle('open');renderItem(it)};
+  h.onclick=e=>{if(e.target.closest('[data-act]')||e.target.closest('.akt'))return;toggle()};
+  h.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}};
+  const cb=h.querySelector('[data-act]');
+  if(cb)cb.onchange=e=>{it.active=e.target.checked;save(it);renderList()};}
 function renderItem(it){
   const a=$('it_'+it.id);if(!a)return;const v=evaluate(it);
-  a.innerHTML=`<button class="head" aria-expanded="${OPEN.has(it.id)}">${headHTML(it,v)}</button>`;
-  a.querySelector('.head').onclick=()=>{if(OPEN.has(it.id))OPEN.delete(it.id);else OPEN.add(it.id);a.classList.toggle('open');renderItem(it)};
+  a.innerHTML=`<div class="head" role="button" tabindex="0" aria-expanded="${OPEN.has(it.id)}">${headHTML(it,v)}</div>`;
+  bindHead(it,a);
   if(OPEN.has(it.id))a.appendChild(bodyEl(it));
 }
 function refresh(it){ITEMS.forEach(o=>{if(o===it||OPEN.has(o.id))refreshOne(o);else renderHead(o)})}
 function refreshOne(it){renderHead(it);const b=$('it_'+it.id);if(!b)return;const v=evaluate(it);
-  const st=b.querySelector('[data-stmt]');if(st){const s=statement(it,it.lang);st.innerHTML=s.html}
   const al=b.querySelector('[data-alerts]');if(al)al.innerHTML=alertsHTML(v);
   const tr=b.querySelector('[data-testres]');if(tr)tr.innerHTML=v.TR.R.map(a=>`<div class="al ${a.lvl}">${esc(a.t.replace(/^Prøvning: /,''))}</div>`).join('')}
 function alertsHTML(v){return v.A.map(a=>`<div class="al ${a.lvl}">${esc(a.t)}</div>`).join('')||'<div class="hint">Ingen automatiske fund endnu.</div>'}
@@ -743,13 +895,9 @@ function bodyEl(it){
     </div>
   </div>
   <div>
-    <div class="box">
-      <div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Statement</h3>
-        <div class="row"><span class="seg"><button data-lang="da" class="${it.lang!=='en'?'on':''}">Dansk</button><button data-lang="en" class="${it.lang==='en'?'on':''}">English</button></span>
-        <button class="btn sm" data-copy>Kopiér</button><button class="btn sm" data-print>Udskriv</button></div></div>
-      <div class="stmt" data-stmt>${statement(it,it.lang).html}</div>
-    </div>
-    <div class="box"><h3>Automatiske fund</h3><div class="alerts" data-alerts>${alertsHTML(v)}</div></div>
+    <div class="box"><div class="row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Info</h3>
+      <div class="row"><label class="row" style="gap:6px;font-size:13px"><input type="checkbox" data-active style="width:17px;height:17px;accent-color:var(--lime)"> Aktiv svejser</label><button class="btn sm" data-print>Udskriv rapport</button></div></div>
+      <div class="alerts" data-alerts>${alertsHTML(v)}</div></div>
     <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><div class="row"><button class="btn sm" data-ocr>${it.ocr&&it.ocr.status==='done'?'Læs teksten igen':'Læs teksten'}</button>${SET.key?`<button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med Claude':'Aflæs med Claude'}</button>`:''}</div></div>
       ${it.ocr&&it.ocr.status==='error'?`<div class="al bad" style="margin:8px 0">Tekstlæsningen fejlede: ${esc(it.ocr.error||'')}</div>`:''}
       ${it.ocr&&it.ocr.status==='done'&&it.ai.status!=='done'?'<p class="hint">Udfyldt med den gratis tekstgenkendelse. Kontrollér værdierne mod certifikatet. Håndskrift kan ikke læses, så 6-måneders underskrifter skal indtastes.</p>':''}
@@ -766,38 +914,53 @@ function bodyEl(it){
       <p class="hint">Reglerne følger ISO 9606-1:2017, afsnit 6.4. Antal og placering af bøje- og brudprøver kontrolleres manuelt.</p>
     </div>
     <div class="box"><h3>6-måneders underskrifter (§9.2)</h3>
-      <p class="hint" style="margin-top:0">Arbejdsgiveren eller svejsekoordinatoren skal bekræfte hver 6. måned. Der må ikke gå mere end 6 måneder fra gyldig-fra-datoen eller den seneste underskrift.</p>
-      <table class="sg"><thead><tr><th>Dato</th><th>Navn</th><th>Stilling</th><th></th></tr></thead><tbody data-conf></tbody></table>
-      <button class="btn sm" data-addconf style="margin-top:6px">Tilføj underskrift</button>
+      <p class="hint" style="margin-top:0">Arbejdsgiveren eller svejsekoordinatoren skal bekræfte hver 6. måned. Underskriften dateres præcis 6 måneder efter den forrige, eller efter gyldig-fra-datoen ved den første.</p>
+      <table class="sg"><thead><tr><th>Dato</th><th>Navn</th><th>Stilling</th><th>Underskrift</th><th></th></tr></thead><tbody data-conf></tbody></table>
+      <div class="row" style="margin-top:6px"><button class="btn sm pri" data-sign>Underskriv</button><button class="btn sm" data-addconf>Tilføj manuelt</button><span class="hint" data-signinfo></span></div>
+      <h4>Stempel i PDF</h4>
+      <p class="hint" style="margin-top:0">Appen finder selv §9.2-tabellen og skriver dato, navn, stilling og din underskrift i den første tomme række. Tjek placeringen i forhåndsvisningen, før du henter filen.</p>
+      <div class="row"><button class="btn sm" data-preview>Vis placering</button><button class="btn sm pri" data-pdf>Hent underskrevet PDF</button>
+        <label class="row" style="gap:5px;font-size:12px;color:var(--dim)">Hældning<input data-angle type="number" step="0.5" style="width:70px" value="${(it.stampPos&&it.stampPos.angle)||0}">°</label>
+        <button class="btn sm" data-resetpos>Nulstil placering</button></div>
+      <div data-stamp style="margin-top:8px"></div>
       <h4>Revalidering hos eksaminator (§9.3)</h4>
       <table class="sg"><thead><tr><th>Dato</th><th>Gyldig til</th><th>Organ</th><th></th></tr></thead><tbody data-reval></tbody></table>
       <button class="btn sm" data-addreval style="margin-top:6px">Tilføj revalidering</button>
     </div>
-    <details class="box dd"><summary>Manuel tjekliste (${v.done}/${v.req})</summary>
-      ${CHECKS.map(g=>`<h4>${g.g}</h4>`+g.items.map(([id,t])=>`<label class="ck ${g.flag?'flag':''}"><input type="checkbox" data-c="${id}"><span>${t}</span></label>`).join('')).join('')}
-    </details>
-    <div class="box"><h3>Bekræftelse hos udstederen</h3>
-      <div class="row"><button class="btn sm" data-mail>Skriv mail til udstederen</button><button class="btn sm" data-search>Find verifikationsside</button><button class="btn sm" data-url>Åbn verifikationslink</button></div>
-      <div class="fields" style="margin-top:10px">
-        <label class="full" style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" data-cf="ok" style="width:17px;height:17px;accent-color:var(--lime)"> Udstederen har bekræftet, at certifikatet er ægte og uændret</label>
-        <label>Dato<input type="date" data-cf="date"></label><label>Bekræftet af<input data-cf="by"></label>
-        <label class="full" style="flex-direction:row;gap:8px;align-items:center;color:var(--ink);font-size:14px"><input type="checkbox" data-cf="no" style="width:17px;height:17px;accent-color:var(--bad)"> Udstederen har afvist certifikatet eller oplyst andre data</label>
-        <label class="full">Bemærkninger<textarea data-notes rows="2"></textarea></label>
-      </div>
+    <div class="box"><h3>Bemærkninger</h3>
+      <textarea data-notes rows="2" placeholder="Fx hvem der sendte certifikatet, og hvad der blev aftalt"></textarea>
       <div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn sm del" data-delete>Fjern fra listen</button></div>
     </div>
   </div>`;
   const q=s=>d.querySelector(s),qa=s=>d.querySelectorAll(s);
   (async()=>{try{const doc=await getDoc(it.id);const P=q('[data-pages]');P.innerHTML='';for(let p=1;p<=doc.n;p++){const c=await renderPage(it.id,p,1100);P.appendChild(c)}}catch(e){q('[data-pages]').innerHTML=`<span class="hint">${esc(e.message)}</span>`}})();
   qa('[data-f]').forEach(el=>{el.value=it.f[el.dataset.f]||'';el.oninput=()=>{it.f[el.dataset.f]=el.value;save(it);refresh(it)};if(el.dataset.f==='certNo')el.onchange=()=>renderList()});
-  qa('[data-c]').forEach(el=>{el.checked=!!it.c[el.dataset.c];el.onchange=()=>{it.c[el.dataset.c]=el.checked;save(it);refresh(it);d.querySelector('summary').textContent=`Manuel tjekliste (${evaluate(it).done}/${evaluate(it).req})`}});
-  qa('[data-cf]').forEach(el=>{const k=el.dataset.cf;if(el.type==='checkbox')el.checked=!!it.cf[k];else el.value=it.cf[k]||'';el.oninput=()=>{it.cf[k]=el.type==='checkbox'?el.checked:el.value;save(it);refresh(it)}});
   q('[data-notes]').value=it.notes||'';q('[data-notes]').oninput=e=>{it.notes=e.target.value;save(it);refresh(it)};
   const rows=(key,cols,tb)=>{tb.innerHTML=it[key].map((r,i)=>`<tr>${cols.map(([k,t])=>`<td><input data-k="${k}" data-i="${i}" type="${t}" value="${esc(r[k]||'')}"></td>`).join('')}<td><button class="btn sm" data-rm="${i}" aria-label="Fjern">✕</button></td></tr>`).join('')||`<tr><td colspan="${cols.length+1}" class="hint">Ingen endnu.</td></tr>`;
     tb.querySelectorAll('input').forEach(el=>el.oninput=()=>{it[key][+el.dataset.i][el.dataset.k]=el.value;it[key][+el.dataset.i].ai=false;save(it);refresh(it)});
     tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{it[key].splice(+b.dataset.rm,1);save(it);rows(key,cols,tb);refresh(it)})};
-  const cc=[['date','date'],['name','text'],['title','text']],rc=[['date','date'],['validUntil','date'],['body','text']];
-  rows('conf',cc,q('[data-conf]'));rows('reval',rc,q('[data-reval]'));
+  const rc=[['date','date'],['validUntil','date'],['body','text']];
+  const confRows=()=>{const tb=q('[data-conf]');
+    tb.innerHTML=it.conf.length?it.conf.map((r,i)=>`<tr>
+      <td><input data-k="date" data-i="${i}" type="date" value="${esc(r.date||'')}"></td>
+      <td><input data-k="name" data-i="${i}" value="${esc(r.name||'')}"></td>
+      <td><input data-k="title" data-i="${i}" value="${esc(r.title||'')}"></td>
+      <td>${r.img?`<img src="${r.img}" alt="Underskrift" style="max-height:34px;background:#fff;border-radius:2px">`:''}${r.signedAt?`<div class="hint" style="font-size:11px">stemplet ${esc(fmt(r.signedAt))}</div>`:''}</td>
+      <td><button class="btn sm" data-rm="${i}" aria-label="Fjern">✕</button></td></tr>`).join(''):'<tr><td colspan="5" class="hint">Ingen endnu.</td></tr>';
+    tb.querySelectorAll('input').forEach(el=>el.oninput=()=>{it.conf[+el.dataset.i][el.dataset.k]=el.value;it.conf[+el.dataset.i].ocr=false;save(it);refresh(it)});
+    tb.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{it.conf.splice(+b.dataset.rm,1);save(it);confRows();refresh(it);signInfo()});
+  };
+  const signInfo=()=>{const due=signDue(it),el=q('[data-signinfo]'),btn=q('[data-sign]');
+    if(!due){el.textContent='Underskrift kan ikke beregnes, før gyldig-fra-datoen er udfyldt, eller fordi kvalifikationen er bortfaldet.';btn.disabled=true;return}
+    btn.disabled=false;const dl=days(D(today()),due);
+    el.textContent=`Næste underskrift dateres ${fmt(due)}${dl>SIGN_WINDOW?` (forfalder om ${dl} dage)`:dl<0?` (${-dl} dage over tid)`:''}.`};
+  confRows();rows('reval',rc,q('[data-reval]'));signInfo();
+  q('[data-sign]').onclick=()=>{
+    const due=signDue(it);if(!due)return;
+    if(!SET.checker){toast('Skriv dit navn under Indstillinger, før du underskriver.');$('btnSettings').click();return}
+    const dl=days(D(today()),due);
+    if(dl>SIGN_WINDOW&&!confirm(`Underskriften dateres ${fmt(due)}, som er ${dl} dage ude i fremtiden. Vil du underskrive nu?`))return;
+    if(signItem(it)){confRows();signInfo();refresh(it);renderList()}};
   const pd=parseDesig(it.f.designation);
   q('[data-spec]').innerHTML=[['wt','Sømtype'],['proc','Proces(ser)'],['t','Tykkelse t (mm)'],['D','Diameter D (mm)'],['fm','FM-gruppe']].map(([k,l])=>k==='wt'?`<label>${l}<select data-sp="wt"><option value="">Fra betegnelse${pd.wt?' ('+pd.wt+')':''}</option><option>BW</option><option>FW</option></select></label>`:`<label>${l}<input data-sp="${k}" placeholder="${esc(pd[k]!=null?'Fra betegnelse: '+pd[k]:'')}"></label>`).join('');
   qa('[data-sp]').forEach(el=>{el.value=it.spec[el.dataset.sp]||'';el.oninput=()=>{it.spec[el.dataset.sp]=el.value;save(it);refresh(it)}});
@@ -805,56 +968,39 @@ function bodyEl(it){
   qa('[data-tk]').forEach(el=>el.oninput=()=>{const k=el.dataset.tk;it.tests[k]=it.tests[k]||{};it.tests[k][el.dataset.tf]=el.type==='checkbox'?el.checked:el.value;if(el.dataset.tf!=='done'&&el.value)it.tests[k].done=true;save(it);refresh(it);if(el.dataset.tf!=='done')q(`[data-tk="${k}"][data-tf="done"]`).checked=!!it.tests[k].done});
   q('[data-testres]').innerHTML=evaluate(it).TR.R.map(a=>`<div class="al ${a.lvl}">${esc(a.t.replace(/^Prøvning: /,''))}</div>`).join('');
   q('[data-supp]').value=it.supp||'';q('[data-supp]').onchange=e=>{it.supp=e.target.value;save(it);refresh(it)};
-  q('[data-addconf]').onclick=()=>{it.conf.push({date:'',name:'',title:''});save(it);rows('conf',cc,q('[data-conf]'));refresh(it)};
+  q('[data-addconf]').onclick=()=>{it.conf.push({date:'',name:'',title:''});save(it);confRows();signInfo();refresh(it)};
+  q('[data-preview]').onclick=()=>previewStamp(it,q('[data-stamp]'));
+  q('[data-pdf]').onclick=async()=>{const b=q('[data-pdf]');b.disabled=true;b.textContent='Laver PDF …';
+    try{await buildStamped(it);toast('PDF hentet.')}catch(e){console.error(e);toast('Kunne ikke lave PDF: '+(e.message||e))}
+    b.disabled=false;b.textContent='Hent underskrevet PDF'};
+  q('[data-angle]').oninput=e=>{const v=parseFloat(e.target.value)||0;it.stampPos=Object.assign({page:stampPageNo(it)},it.stampPos||{},{angle:v});save(it);if(q('[data-stamp]').firstChild)previewStamp(it,q('[data-stamp]'))};
+  q('[data-resetpos]').onclick=()=>{delete it.stampPos;save(it);previewStamp(it,q('[data-stamp]'))};
   q('[data-addreval]').onclick=()=>{it.reval.push({date:'',validUntil:'',body:''});save(it);rows('reval',rc,q('[data-reval]'));refresh(it)};
-  qa('[data-lang]').forEach(b=>b.onclick=()=>{it.lang=b.dataset.lang;save(it);qa('[data-lang]').forEach(x=>x.classList.toggle('on',x===b));refresh(it)});
-  q('[data-copy]').onclick=async()=>{const t=q('[data-stmt]').innerText;try{await navigator.clipboard.writeText(t);toast('Statement kopieret.')}catch(e){toast('Kunne ikke kopiere. Markér teksten og kopiér manuelt.')}};
-  q('[data-print]').onclick=()=>printStatements([it]);
+  q('[data-active]').checked=!!it.active;q('[data-active]').onchange=e=>{it.active=e.target.checked;save(it);renderList()};
+  q('[data-print]').onclick=()=>printReports([it]);
   q('[data-ocr]').onclick=()=>{if(it.ocr&&it.ocr.status==='done'&&!confirm('Læs teksten igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;ocrQueue(it.id)};
   if(q('[data-ai]'))q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
   q('[data-cmpgo]').onclick=async()=>{const o=ITEMS.find(x=>x.id===q('[data-cmpsel]').value);if(!o)return;q('[data-crops]').innerHTML='<p class="hint">Sammenligner …</p>';await new Promise(r=>setTimeout(r,20));try{await compare(it,o)}catch(e){toast('Sammenligningen fejlede: '+e.message)}renderList()};
-  q('[data-mail]').onclick=()=>mailIssuer(it);
-  q('[data-search]').onclick=()=>window.open('https://www.google.com/search?q='+encodeURIComponent(`${it.f.issuer||''} welder qualification certificate verification`),'_blank','noopener');
-  q('[data-url]').onclick=()=>{const u=(it.f.verifyUrl||'').trim();if(!/^https?:\/\//i.test(u)){toast('Indtast linket fra certifikatets QR-kode i feltet "QR-kode eller verifikationslink".');return}if(confirm('Åbn '+u+'?\n\nTjek at domænet tilhører udstederen. Falske certifikater kan have falske links.'))window.open(u,'_blank','noopener')};
   q('[data-delete]').onclick=async()=>{if(!confirm('Fjern certifikatet fra listen?'))return;await dbDel(it.id);docCache.delete(it.id);ITEMS=ITEMS.filter(x=>x!==it);ITEMS.forEach(o=>{if(o.cmp[it.id]){delete o.cmp[it.id];save(o)}});OPEN.delete(it.id);renderList()};
   return d;
 }
-function mailIssuer(it){
-  const f=it.f;const conf=it.conf.map(c=>`  ${c.date||'?'} ${c.name||''} ${c.title||''}`).join('\n');
-  const body=`Dear ${f.issuer||'Sir/Madam'},
-
-We have received the welder qualification certificate below and kindly ask you to confirm that it was issued by you and that the content is unchanged.
-
-Certificate no.: ${f.certNo||''}
-File no.: ${f.fileNo||''}
-Welder: ${f.name||''}
-Date of birth: ${f.dob||''}
-Employer stated on the certificate: ${f.employer||''}
-Designation: ${f.designation||''}
-Validity from: ${f.testDate||''}
-Valid until: ${f.validTo||''}
-Examiner / date: ${f.examiner||''} ${f.issueDate||''}
-${conf?'6-month confirmations on the copy we received:\n'+conf+'\n':''}
-Please confirm in particular which employer is stated on the original certificate. A copy of the certificate we received is attached.
-
-Kind regards
-${[SET.checker,SET.company].filter(Boolean).join('\n')}`;
-  location.href=`mailto:${encodeURIComponent(f.issuerEmail||'')}?subject=${encodeURIComponent('Verification request – welder certificate '+(f.certNo||''))}&body=${encodeURIComponent(body)}`;
-}
-
 /* ================= udskrift og eksport ================= */
-function printStatements(list){
+function printReports(list){
   if(!list.length){toast('Der er ingen certifikater at udskrive.');return}
-  $('printArea').innerHTML=list.map(it=>`<div class="stmt">${statement(it,it.lang).html}</div>`).join('');
+  $('printArea').innerHTML=list.map(it=>`<div class="stmt">${report(it)}</div>`).join('');
   setTimeout(()=>window.print(),60);
 }
-$('btnPrintAll').onclick=()=>{const q=norm($('q').value);printStatements(ITEMS.filter(it=>{const v=evaluate(it);const isF=v.big==='Mulig forfalskning'||v.big==='Afvist af udsteder';
-  if(q&&!norm([it.f.name,it.f.certNo,it.f.employer,it.f.issuer,it.file.name].join(' ')).includes(q))return false;
-  return FILTER==='all'||(FILTER==='fraud'&&isF)||(FILTER==='bad'&&v.cls==='bad'&&!isF)||(FILTER==='ok'&&v.cls==='ok')||(FILTER==='warn'&&v.cls==='warn')}))};
+$('btnPrintAll').onclick=()=>printReports(visibleItems());
+$('btnSignAll').onclick=()=>{
+  const todo=ITEMS.filter(it=>it.active&&canSignNow(it));
+  if(!todo.length){toast('Ingen aktive certifikater skal underskrives inden for '+SIGN_WINDOW+' dage.');return}
+  if(!SET.checker){toast('Skriv dit navn under Indstillinger, før du underskriver.');$('btnSettings').click();return}
+  if(!confirm(`Underskriv ${todo.length} ${todo.length===1?'certifikat':'certifikater'} efter §9.2?\n\nHver underskrift dateres præcis 6 måneder efter den forrige.`))return;
+  let n=0;todo.forEach(it=>{if(signItem(it))n++});renderList();toast(`${n} underskrevet.`)};
 $('btnCsv').onclick=()=>{
-  const cols=['Resultat','Svejser','Fødselsdato','Cert.-nr.','Udsteder','Arbejdsgiver','Betegnelse','Gyldig fra','Gyldig til','Seneste underskrift','Næste underskrift senest','Antal underskrifter','Prøvninger','Fund','Fil'];
+  const cols=['Resultat','Aktiv','Svejser','Fødselsdato','Cert.-nr.','Udsteder','Arbejdsgiver','Betegnelse','Gyldig fra','Gyldig til','Seneste underskrift','Næste underskrift senest','Antal underskrifter','Prøvninger','Fund','Fil'];
   const q=s=>`"${String(s??'').replace(/"/g,'""')}"`;
-  const lines=ITEMS.map(it=>{const v=evaluate(it),s=v.sig;return[v.big,it.f.name,it.f.dob,it.f.certNo,it.f.issuer,it.f.employer,it.f.designation,it.f.testDate,s.end?iso(s.end):'',s.last?iso(s.last):'',s.nextDue?iso(s.nextDue):'',it.conf.length,TESTS.filter(([k])=>it.tests&&it.tests[k]&&it.tests[k].done).map(t=>t[1]).join(', '),v.A.filter(a=>a.lvl!=='ok').map(a=>a.t).join(' | '),it.file.name].map(q).join(';')});
+  const lines=ITEMS.map(it=>{const v=evaluate(it),s=v.sig;return[v.big,it.active?'Ja':'Nej',it.f.name,it.f.dob,it.f.certNo,it.f.issuer,it.f.employer,it.f.designation,it.f.testDate,s.end?iso(s.end):'',s.last?iso(s.last):'',s.nextDue?iso(s.nextDue):'',it.conf.length,TESTS.filter(([k])=>it.tests&&it.tests[k]&&it.tests[k].done).map(t=>t[1]).join(', '),v.A.filter(a=>a.lvl!=='ok').map(a=>a.t).join(' | '),it.file.name].map(q).join(';')});
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+[cols.map(q).join(';'),...lines].join('\r\n')],{type:'text/csv'}));a.download=`svejsercertifikater-${today()}.csv`;a.click();
 };
 $('btnBackup').onclick=async()=>{
@@ -874,7 +1020,7 @@ $('fileRestore').onchange=async e=>{
 (async()=>{
   showAi();
   try{await dbOpen();ITEMS=(await dbAll()).sort((a,b)=>b.added.localeCompare(a.added))}catch(e){toast('Browseren tillader ikke lokal lagring. Listen gemmes ikke.')}
-  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};it.ocr=it.ocr||{status:'none',text:''};if(it.ocr.status==='running'||it.ocr.status==='queued')it.ocr.status='none';if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
+  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};it.ocr=it.ocr||{status:'none',text:''};if(it.active===undefined)it.active=true;if(it.ocr.status==='running'||it.ocr.status==='queued')it.ocr.status='none';if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
   renderList();
   ITEMS.filter(it=>!Object.values(it.f).some(Boolean)&&it.ai.status!=='done'&&it.ocr.status==='none').forEach(it=>{readItem(it.id)});
 })();
