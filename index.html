@@ -143,7 +143,7 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
     <input type="search" id="q" placeholder="Søg navn, cert.-nr., arbejdsgiver">
     <div class="chips" id="chips"></div>
     <span class="sp" style="margin-left:auto"></span>
-    <button class="btn" id="btnAiAll">Aflæs alle med AI</button>
+    <button class="btn" id="btnAiAll">Aflæs alle</button>
     <button class="btn" id="btnPrintAll">Udskriv statements</button>
     <button class="btn" id="btnCsv">Eksportér liste (CSV)</button>
     <button class="btn" id="btnBackup">Backup</button>
@@ -227,6 +227,7 @@ const addM=(d,m)=>{const x=new Date(d);const day=x.getDate();x.setMonth(x.getMon
 const fmt=d=>{if(typeof d==='string')d=D(d);return d?d.toLocaleDateString('da-DK',{day:'2-digit',month:'2-digit',year:'numeric'}):''};
 const days=(a,b)=>Math.round((b-a)/864e5);
 const normDate=s=>{if(!s)return'';s=String(s).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;const m=s.match(/^(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:''};
+const certKey=s=>norm(s).replace(/z/g,'2').replace(/o/g,'0').replace(/[il]/g,'1').replace(/s/g,'5').replace(/b/g,'8').replace(/g/g,'6').replace(/t/g,'7');
 const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9æøåäöüșțăâîéèç]/g,'');
 
 /* ================= rumænsk CNP ================= */
@@ -234,7 +235,7 @@ function cnpCheck(v){v=(v||'').replace(/\s/g,'');if(!/^[1-8]\d{12}$/.test(v))ret
 
 /* ================= state ================= */
 let ITEMS=[];let FILTER='all';const OPEN=new Set();
-function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],tests:{},supp:'',spec:{},c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},cmp:{},lang:'da'}}
+function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},conf:[],reval:[],tests:{},supp:'',spec:{},c:{},cf:{ok:false,no:false,date:'',by:''},notes:'',ai:{status:'none',anomalies:[],error:''},ocr:{status:'none',text:''},cmp:{},lang:'da'}}
 
 /* ================= PDF/billede ================= */
 const docCache=new Map();
@@ -302,7 +303,7 @@ async function runQ(){
       const it=newItem(f,hash);
       await dbBlobPut(it.id,new Blob([buf],{type:f.type||(/\.pdf$/i.test(f.name)?'application/pdf':'')}));
       await inspect(it);ITEMS.unshift(it);await dbPut(it);renderList();
-      if(SET.key&&SET.auto)aiQueue(it.id);
+      if(SET.key&&SET.auto)aiQueue(it.id);else ocrQueue(it.id);
     }catch(e){console.error(e);toast(`${f.name} kunne ikke læses: ${e.message||e}`)}
   }
   $('queue').textContent='';qBusy=false;
@@ -351,7 +352,115 @@ async function aiRead(id){
   }catch(e){console.error(e);it.ai.status='error';it.ai.error=String(e.message||e)}
   save(it);renderList();
 }
-$('btnAiAll').onclick=()=>{const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst.');return}todo.forEach(x=>aiQueue(x.id))};
+$('btnAiAll').onclick=()=>{
+  if(SET.key){const todo=ITEMS.filter(x=>x.ai.status!=='done'&&x.ai.status!=='running'&&x.ai.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst med AI.');return}todo.forEach(x=>aiQueue(x.id))}
+  else{const todo=ITEMS.filter(x=>x.ocr.status!=='done'&&x.ocr.status!=='running'&&x.ocr.status!=='queued');if(!todo.length){toast('Alle certifikater er allerede aflæst.');return}todo.forEach(x=>ocrQueue(x.id))}};
+
+/* ================= tekstgenkendelse (gratis, i browseren) ================= */
+const TESS_V='5.1.1';let TESS=null;
+async function tessWorker(){
+  if(TESS)return TESS;
+  if(!window.Tesseract)await new Promise((r,j)=>{const s=document.createElement('script');s.src=`https://cdn.jsdelivr.net/npm/tesseract.js@${TESS_V}/dist/tesseract.min.js`;s.onload=r;s.onerror=()=>j(new Error('Tekstgenkendelsen kunne ikke hentes. Tjek internetforbindelsen.'));document.head.appendChild(s)});
+  TESS=await Tesseract.createWorker('eng',1,{workerPath:`https://cdn.jsdelivr.net/npm/tesseract.js@${TESS_V}/dist/worker.min.js`,corePath:`https://cdn.jsdelivr.net/npm/tesseract.js-core@${TESS_V}`,langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'});
+  await TESS.setParameters({tessedit_pageseg_mode:'3',preserve_interword_spaces:'1'});
+  return TESS;
+}
+const OQ=[];let ocrBusy=false;
+function ocrQueue(id){const it=ITEMS.find(x=>x.id===id);if(!it)return;it.ocr.status='queued';renderHead(it);if(!OQ.includes(id))OQ.push(id);ocrPump()}
+async function ocrPump(){
+  if(ocrBusy)return;ocrBusy=true;
+  while(OQ.length){const id=OQ.shift(),it=ITEMS.find(x=>x.id===id);if(!it)continue;
+    it.ocr.status='running';renderHead(it);
+    try{const w=await tessWorker(),d=await getDoc(id),parts=[];
+      const raw=[];
+      for(let p=1;p<=Math.min(d.n,2);p++){
+        const c=await renderPage(id,p,2200);
+        if(p===1){const r0=await w.recognize(c,{},{text:true,blocks:true});raw.push(rowsFromOCR(r0.data))}
+        const r=await w.recognize(cleanForOCR(c),{},{text:true,blocks:true});parts.push(rowsFromOCR(r.data))}
+      it.ocr={status:'done',text:parts.join('\n=====\n'),at:new Date().toISOString()};
+      const A=parseOCR(parts),B=parseOCR([raw[0],parts[1]||'']);
+      Object.keys(B.f).forEach(k=>{if(!A.f[k])A.f[k]=B.f[k]});
+      {const fn=A.nm.fn||B.nm.fn,ln=A.nm.ln||B.nm.ln;if(fn&&ln)A.f.name=tcase(fn+' '+ln)}Object.keys(B.tests).forEach(k=>{if(!A.tests[k])A.tests[k]=B.tests[k]});if(!A.supp)A.supp=B.supp;
+      applyOCR(it,A);
+    }catch(e){console.error(e);it.ocr={status:'error',text:'',error:String(e.message||e)}}
+    save(it);renderList();
+  }
+  ocrBusy=false;
+}
+// fjerner tabellinjer, så tekst i celler læses bedre
+function cleanForOCR(c){
+  const w=c.width,h=c.height,ctx=c.getContext('2d'),img=ctx.getImageData(0,0,w,h),d=img.data,m=new Uint8Array(w*h);
+  for(let i=0,j=0;i<m.length;i++,j+=4)m[i]=(d[j]*.3+d[j+1]*.59+d[j+2]*.11)<170?1:0;
+  const hl=openLine(m,w,h,35,false),vl=openLine(m,w,h,35,true),l=new Uint8Array(w*h);for(let i=0;i<l.length;i++)l[i]=hl[i]|vl[i];
+  const ld=dilate(l,w,h,1);
+  for(let i=0,j=0;i<m.length;i++,j+=4){const v=ld[i]?255:(d[j]*.3+d[j+1]*.59+d[j+2]*.11);d[j]=d[j+1]=d[j+2]=v}
+  ctx.putImageData(img,0,0);return c}
+// samler ord til linjer efter deres lodrette placering, uanset tekstblokke
+function rowsFromOCR(data){
+  const words=[];(data.blocks||[]).forEach(b=>(b.paragraphs||[]).forEach(p=>(p.lines||[]).forEach(l=>(l.words||[]).forEach(wd=>{if(wd.text&&wd.text.trim())words.push({t:wd.text,x0:wd.bbox.x0,x1:wd.bbox.x1,y0:wd.bbox.y0,y1:wd.bbox.y1})}))));
+  if(!words.length)return data.text||'';
+  const hs=words.map(w=>w.y1-w.y0).sort((a,b)=>a-b),mh=hs[hs.length>>1]||20;
+  words.sort((a,b)=>(a.y0+a.y1)-(b.y0+b.y1));
+  const rows=[];words.forEach(w=>{const cy=(w.y0+w.y1)/2;const r=rows.find(r=>Math.abs(r.cy-cy)<mh*.55);if(r){r.w.push(w);r.cy=(r.cy*(r.w.length-1)+cy)/r.w.length}else rows.push({cy,w:[w]})});
+  rows.sort((a,b)=>a.cy-b.cy);
+  return rows.map(r=>{r.w.sort((a,b)=>a.x0-b.x0);let s='',px=null;r.w.forEach(w=>{if(px!=null)s+=(w.x0-px>mh*2.5?'   ':' ');s+=w.t;px=w.x1});return s}).join('\n');
+}
+const DRX=/(\d{1,2})\s?[.\/-]\s?(\d{1,2})\s?[.\/-]\s?(\d{4})/g;
+const dISO=m=>`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+const datesIn=s=>[...String(s||'').matchAll(DRX)].map(dISO).filter(x=>D(x)&&!isNaN(D(x)));
+const tcase=s=>s.toLowerCase().replace(/(^|[\s\-'])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase());
+function cleanName(v){if(!v)return'';v=v.replace(/I!/g,'I').replace(/!/g,'I').replace(/\|/g,'I').replace(/[^\p{L}\s\-']/gu,' ').replace(/\s+/g,' ').trim();
+  const ch=v.split(' ');if(ch.length>1&&ch.every(c=>/^[A-ZĂÂÎȘȚÄÖÜÆØÅ]+$/.test(c))&&(ch.every(c=>c.length<=4)||ch.some(c=>c.length<=2)))v=ch.join('');return v}
+function tokenAfter(text,labelRx,span=90){const m=text.match(labelRx);if(!m)return'';const tail=text.slice(m.index+m[0].length,m.index+m[0].length+span);
+  const withLetter=tail.match(/\b(?=[A-Z0-9\/\-.]*[A-Z])(?=[A-Z0-9\/\-.]*\d)[A-Z0-9][A-Z0-9\/\-.]{4,}[A-Z0-9]\b/);if(withLetter)return withLetter[0];
+  const digits=tail.match(/\b\d[\d\/\-.]{4,}\d\b/);return digits?digits[0]:''}
+const BODIES=[['Bureau Veritas',/bureau\s*veritas/i],['DNV',/\bDNV\b|det\s*norske\s*veritas/i],["Lloyd's Register",/lloyd'?s\s*register/i],['ABS',/american\s*bureau\s*of\s*shipping/i],['TÜV SÜD',/t[üu]e?v\s*s[üu]e?d/i],['TÜV NORD',/t[üu]e?v\s*nord/i],['TÜV Rheinland',/t[üu]e?v\s*rheinland/i],['TÜV Austria',/t[üu]e?v\s*austria/i],['Kiwa',/\bkiwa\b/i],['DEKRA',/\bdekra\b/i],['FORCE Technology',/force\s*technology/i],['Applus+',/applus/i],['SGS',/\bSGS\b/],['Intertek',/intertek/i],['RINA',/\bRINA\b/],['ClassNK',/classnk|nippon\s*kaiji/i],['Korean Register',/korean\s*register/i],['SLV',/\bSLV\b/],['GSI SLV',/\bGSI\b/],['Inspecta',/inspecta/i]];
+function parseOCR(parts){
+  const p1=parts[0]||'',all=parts.join('\n'),f={},tests={};let supp='';const conf=[];
+  const lines=p1.split('\n').map(s=>s.trim()).filter(Boolean);
+  const body=BODIES.find(([,rx])=>rx.test(all));
+  let office=(p1.match(/Office[^:\n]*:\s*([A-Z][A-Za-z .\-]{2,40})/)||[])[1];if(office)office=office.split(/\s{3,}|\|/)[0].replace(/(\s+[A-Za-z]{1,2})+\s*$/,'').trim();
+  if(body)f.issuer=body[0]+(body[0]==='Bureau Veritas'&&/marine\s*&\s*offshore/i.test(all)?' Marine & Offshore':'')+(office?', '+tcase(office.trim().replace(/\s*-\s*/,' - ')):'');
+  const em=all.match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/);if(em)f.issuerEmail=em[0];
+  f.certNo=tokenAfter(p1,/Certificat(?:e)?\s*(?:No|N[°ºo]|Nr|Number)\.?/i);
+  f.fileNo=tokenAfter(p1,/File\s*(?:No|N[°ºo]|Nr)\.?/i);
+  const des=p1.match(/(?:EN\s*)?ISO\s*9606-1\s+\d{3}[^\n]*/);
+  if(des)f.designation=des[0].replace(/\s+[_|]+\s*$/,'').replace(/\bMIP\b/,'M/P').replace(/\bH-LO45\b/,'H-L045').trim();
+  const std=all.match(/(?:EN\s*)?ISO\s*9606-1\s*:\s*(\d{4})/);f.standard=std?`EN ISO 9606-1:${std[1]}`:(des?'EN ISO 9606-1':'');
+  const ln=(p1.match(/Last\s*Name[^:\n]*:\s*[|\s]*([^\n|]*?)(?=\s+Personal|\s{2,}|\s*\||\n|$)/i)||[])[1];
+  const fn=(p1.match(/First\s*Name[^:\n]*:\s*[|\s]*([^\n|]*?)(?=\s+Num[eé]ro|\s{2,}|\s*\||\n|$)/i)||[])[1];
+  const nm={ln:cleanName(ln),fn:cleanName(fn)};
+  if(ln||fn)f.name=tcase([nm.fn,nm.ln].filter(Boolean).join(' '));
+  else{const nm=(p1.match(/(?:Welder'?s?\s*)?Name(?:\s*of\s*welder)?\s*[:\-]\s*([^\n]+)/i)||[])[1];if(nm)f.name=tcase(cleanName(nm))}
+  const dob=p1.match(/(?:Date\s*(?:and\s*place\s*)?of\s*birth|Birth\s*date)[^\d\n]*(\d{1,2}\s?[.\/-]\s?\d{1,2}\s?[.\/-]\s?\d{4})/i);if(dob)f.dob=datesIn(dob[1])[0]||'';
+  const cnp=p1.match(/\b[1-8]\d{12}\b/);if(cnp)f.idNo=cnp[0];
+  const ei=lines.findIndex(l=>/\b(Employer|E\w{0,2}loyers?)\b\s*[:.>]?/i.test(l)&&!/Employeur\s*$/i.test(l.trim())||/^\W*Employer/i.test(l));
+  if(ei>=0){const strip=s=>s.replace(/^.*?\b(Employer|E\w{0,2}loyers?)\b\s*[:.]?\s*/i,'').replace(/Employeur/i,'').replace(/^(Em\w*)?\s*[>:|»]+\s*/,'').split(/\s{3,}|\s\|/)[0].replace(/\s+[a-z]{1,2}$/,'').trim();
+    let v=strip(lines[ei]);if(v.length<3&&lines[ei+1])v=strip(lines[ei+1].replace(/^Em\w*/,''));if(v.length>=3)f.employer=v}
+  const vb=p1.search(/Validity\s*begins|Valid(?:ity)?\s*from|Date\s*of\s*(?:welder\s*)?test/i);
+  if(vb>=0){const ds=datesIn(p1.slice(vb));if(ds[0])f.testDate=ds[0];if(ds[1]&&ds[1]>ds[0])f.validTo=ds[1];if(ds[2])f.issueDate=ds[2]}
+  if(!f.testDate){for(const l of lines){if(/rep/i.test(l))continue;const ds=datesIn(l);if(ds.length>=2){const y=(D(ds[1])-D(ds[0]))/(365.25*864e5);if(y>0.9&&y<4.1){f.testDate=ds[0];f.validTo=ds[1];break}}}}
+  if(!f.validTo){const vu=p1.match(/Valid\s*until[^\n]*/i);if(vu){const d=datesIn(vu[0])[0];if(d)f.validTo=d}}
+  const vuLine=(p1.match(/Valid\s*until[^\n]*/i)||[''])[0];const mm=vuLine.match(/9\.3\s*([abc])/i);if(mm)f.method=mm[1].toLowerCase();
+  const rs=all.match(/used\s+for\s+([^.\n]{5,140}?)\s+only/i);if(rs)f.restrictions=`${rs[1]} only`;
+  const TL=[['vt',/^Visual/i],['rt',/^Radiograph/i],['ut',/^Ultrason/i],['mt',/^Magnetic/i],['pt',/^(?:Liquid\s*)?Penetrant|^Dye/i],['macro',/^Macro/i],['fracture',/^Fracture/i],['bend',/^Bend/i],['nt',/^Notch/i]];
+  lines.forEach(l=>{const t=TL.find(([,rx])=>rx.test(l));if(!t||tests[t[0]])return;
+    const rest=l.replace(/^[A-Za-z ]+(\([^)]*\))?/,'');const ds=datesIn(rest);
+    const rp=rest.match(/([A-Z]{0,6}\s*Rep(?:ort)?\.?\s*No\.?\s*[\w\-]+?)\s*(?=\/\s*\d{1,2}[.\/-]|\s|$)/i)||rest.match(/(?:Report|Rep\.?)\s*(?:No\.?)?\s*[\w\-\/]+/i);
+    if(ds.length||rp)tests[t[0]]={done:true,report:rp?(rp[1]||rp[0]).trim():'',date:ds[0]||''}});
+  const sy=p1.match(/YES\s*\(Oui\)\s*(\S{1,4})/i);if(sy&&/[&xX☒⊠■K\]1-9]/.test(sy[1])&&!/^(\[\]|C\]|O|o|0|□)$/.test(sy[1]))supp='yes';
+  if(parts[1]){const p2=parts[1];const a=p2.search(/Confirmation\s*of\s*qualification/i),b=p2.search(/Revalidation/i);
+    if(a>=0){datesIn(p2.slice(a,b>a?b:undefined)).forEach(d=>conf.push({date:d,name:'',title:'',ocr:true}))}}
+  Object.keys(f).forEach(k=>{if(!f[k])delete f[k]});
+  return{f,tests,supp,conf,nm};
+}
+function applyOCR(it,r){
+  FIELDS.forEach(([k])=>{if(r.f[k]&&!it.f[k])it.f[k]=r.f[k]});
+  if(r.f.method&&!it.f.method)it.f.method=r.f.method;
+  if(!TESTS.some(([k])=>it.tests[k]&&it.tests[k].done))Object.assign(it.tests,r.tests);
+  if(!it.supp&&r.supp)it.supp=r.supp;
+  if(!it.conf.length&&r.conf.length)it.conf=r.conf;
+}
 
 /* ================= prøvning (ISO 9606-1, 6.4) ================= */
 const TESTS=[['vt','Visuel kontrol (VT)','visual testing'],['rt','Radiografi (RT)','radiography'],['ut','Ultralyd (UT)','ultrasonic testing'],['bend','Bøjeprøve','bend test'],['fracture','Brudprøve','fracture test'],['macro','Makro','macro examination'],['nt','Kærvtrækprøve af helt rør','notched tensile test'],['mt','Magnetpulver (MT)','magnetic particle testing'],['pt','Penetrant (PT)','penetrant testing']];
@@ -408,10 +517,10 @@ function testRules(it){
 
 /* ================= vurdering ================= */
 function crossAlerts(it){
-  const A=[];const cn=norm(it.f.certNo);
+  const A=[];const cn=certKey(it.f.certNo);
   ITEMS.forEach(o=>{
     if(o===it)return;
-    const same=cn&&cn===norm(o.f.certNo);
+    const same=cn&&cn===certKey(o.f.certNo);
     const r=it.cmp[o.id];
     if(!same&&!r)return;
     const lab=`${o.file.name}`;
@@ -472,7 +581,7 @@ function evaluate(it){
   else if(TR.ok===false){cls='bad';big='Utilstrækkelig prøvning';en='Insufficient testing'}
   else if(!start||TR.ok===null){cls='warn';big='Mangler data';en='Insufficient data'}
   else{cls='ok';big=it.cf.ok?'Gyldigt, bekræftet':'Gyldigt';en=it.cf.ok?'Valid, confirmed by the issuer':'Valid'}
-  if(it.ai.status==='running')sub='Aflæses med AI …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ai.status==='error')sub='AI-fejl';
+  if(it.ai.status==='running')sub='Aflæses med AI …';else if(it.ai.status==='queued')sub='Venter på AI …';else if(it.ocr&&it.ocr.status==='running')sub='Læser teksten …';else if(it.ocr&&it.ocr.status==='queued')sub='Venter på tekstlæsning …';else if(it.ai.status==='error')sub='AI-fejl';else if(it.ocr&&it.ocr.status==='error')sub='Tekstlæsning fejlede';
   else if(cls!=='bad'||big==='Ikke gyldigt'||big==='Utilstrækkelig prøvning')sub=`Tjekliste ${done}/${req.length}`;
   return{A,cls,big,en,sub,sig,fraud,done,req:req.length,TR};
 }
@@ -493,7 +602,7 @@ function statement(it,lang){
   const concl=v.cls==='bad'?conclTxt.bad[v.big]:conclTxt[v.cls];
   const s=v.sig;
   const val=s.start?L(`Gyldigt fra ${fmt(s.start)}${s.end?' til '+fmt(s.end):''}${f.method?` (forlængelse efter §9.3 ${f.method})`:''}. `,`Valid from ${iso(s.start)}${s.end?' to '+iso(s.end):''}${f.method?` (revalidation per clause 9.3 ${f.method})`:''}. `):'';
-  const conf=it.conf.length?L(`6-måneders bekræftelser (§9.2): ${it.conf.map(c=>`${c.date?fmt(c.date):'ulæselig dato'}${c.name?' '+esc(c.name):''}`).join(', ')}.`,`6-month confirmations (clause 9.2): ${it.conf.map(c=>`${c.date||'unreadable date'}${c.name?' '+esc(c.name):''}`).join(', ')}.`):L('Ingen 6-måneders bekræftelser er underskrevet.','No 6-month confirmations have been signed.');
+  const conf=it.conf.length?L(`6-måneders bekræftelser (§9.2): ${it.conf.map(c=>`${c.date?fmt(c.date):'ulæselig dato'}${c.name?' '+esc(c.name):''}`).join(', ')}.`,`6-month confirmations (clause 9.2): ${it.conf.map(c=>`${c.date||'unreadable date'}${c.name?' '+esc(c.name):''}`).join(', ')}.`):(s.start&&s.nextDue&&D(today())<=s.nextDue?L(`Ingen 6-måneders bekræftelser er underskrevet endnu. Det er i orden, da den første først skal underskrives senest ${fmt(s.nextDue)}.`,`No 6-month confirmations have been signed yet. This is in order, as the first one is not due until ${iso(s.nextDue)}.`):L('Ingen 6-måneders bekræftelser er underskrevet.','No 6-month confirmations have been signed.'));
   const find=v.A.filter(a=>a.lvl!=='ok');const okf=v.A.filter(a=>a.lvl==='ok');
   const crops=v.A.filter(a=>a.crops).flatMap(a=>a.crops);
   let rec;
@@ -560,7 +669,7 @@ async function compare(x,y){
 let cmpBusy=false;
 async function autoCompare(){
   if(cmpBusy)return;cmpBusy=true;
-  try{for(const a of ITEMS)for(const b of ITEMS){if(a===b||a.id>b.id)continue;const cn=norm(a.f.certNo);if(!cn||cn!==norm(b.f.certNo)||a.cmp[b.id]||a.file.hash===b.file.hash)continue;
+  try{for(const a of ITEMS)for(const b of ITEMS){if(a===b||a.id>b.id)continue;const cn=certKey(a.f.certNo);if(!cn||cn!==certKey(b.f.certNo)||a.cmp[b.id]||a.file.hash===b.file.hash)continue;
     $('queue').textContent=`Sammenligner ${a.file.name} med ${b.file.name} …`;await new Promise(r=>setTimeout(r,20));
     try{await compare(a,b)}catch(e){console.error(e)}
     renderList()}}finally{$('queue').textContent=Q.length?$('queue').textContent:'';cmpBusy=false}
@@ -633,7 +742,9 @@ function bodyEl(it){
       <div class="stmt" data-stmt>${statement(it,it.lang).html}</div>
     </div>
     <div class="box"><h3>Automatiske fund</h3><div class="alerts" data-alerts>${alertsHTML(v)}</div></div>
-    <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med AI':'Aflæs med AI'}</button></div>
+    <div class="box"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Oplysninger</h3><div class="row"><button class="btn sm" data-ocr>${it.ocr&&it.ocr.status==='done'?'Læs teksten igen':'Læs teksten'}</button><button class="btn sm" data-ai>${it.ai.status==='done'?'Aflæs igen med AI':'Aflæs med AI'}</button></div></div>
+      ${it.ocr&&it.ocr.status==='error'?`<div class="al bad" style="margin:8px 0">Tekstlæsningen fejlede: ${esc(it.ocr.error||'')}</div>`:''}
+      ${it.ocr&&it.ocr.status==='done'&&it.ai.status!=='done'?'<p class="hint">Udfyldt med tekstgenkendelse. Kontrollér værdierne mod certifikatet. Håndskrift kan ikke læses, så 6-måneders underskrifter skal indtastes.</p>':''}
       ${it.ai.status==='error'?`<div class="al bad" style="margin:8px 0">AI-aflæsningen fejlede: ${esc(it.ai.error)}</div>`:''}
       ${it.ai.status==='done'?'<p class="hint">Aflæst med AI. Kontrollér værdierne mod certifikatet, især håndskrevne datoer.</p>':''}
       <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}"></label>`).join('')}</div>
@@ -691,6 +802,7 @@ function bodyEl(it){
   qa('[data-lang]').forEach(b=>b.onclick=()=>{it.lang=b.dataset.lang;save(it);qa('[data-lang]').forEach(x=>x.classList.toggle('on',x===b));refresh(it)});
   q('[data-copy]').onclick=async()=>{const t=q('[data-stmt]').innerText;try{await navigator.clipboard.writeText(t);toast('Statement kopieret.')}catch(e){toast('Kunne ikke kopiere. Markér teksten og kopiér manuelt.')}};
   q('[data-print]').onclick=()=>printStatements([it]);
+  q('[data-ocr]').onclick=()=>{if(it.ocr&&it.ocr.status==='done'&&!confirm('Læs teksten igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;ocrQueue(it.id)};
   q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
   q('[data-cmpgo]').onclick=async()=>{const o=ITEMS.find(x=>x.id===q('[data-cmpsel]').value);if(!o)return;q('[data-crops]').innerHTML='<p class="hint">Sammenligner …</p>';await new Promise(r=>setTimeout(r,20));try{await compare(it,o)}catch(e){toast('Sammenligningen fejlede: '+e.message)}renderList()};
   q('[data-mail]').onclick=()=>mailIssuer(it);
@@ -754,8 +866,9 @@ $('fileRestore').onchange=async e=>{
 (async()=>{
   showAi();
   try{await dbOpen();ITEMS=(await dbAll()).sort((a,b)=>b.added.localeCompare(a.added))}catch(e){toast('Browseren tillader ikke lokal lagring. Listen gemmes ikke.')}
-  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
+  ITEMS.forEach(it=>{it.cmp=it.cmp||{};it.conf=it.conf||[];it.reval=it.reval||[];it.ai=it.ai||{status:'none',anomalies:[]};it.ai.anomalies=it.ai.anomalies||[];it.tests=it.tests||{};it.supp=it.supp||'';it.spec=it.spec||{};it.ocr=it.ocr||{status:'none',text:''};if(it.ocr.status==='running'||it.ocr.status==='queued')it.ocr.status='none';if(it.ai.status==='running'||it.ai.status==='queued')it.ai.status='none'});
   renderList();
+  ITEMS.filter(it=>!Object.values(it.f).some(Boolean)&&it.ai.status!=='done'&&it.ocr.status==='none').forEach(it=>{if(SET.key&&SET.auto)aiQueue(it.id);else ocrQueue(it.id)});
 })();
 </script>
 </body>
