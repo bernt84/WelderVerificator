@@ -30,6 +30,7 @@ main{max-width:1400px;margin:0 auto;padding:16px}
 .btn.del{color:var(--bad)}
 .btn:disabled{opacity:.5;cursor:default}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input:-webkit-autofill{-webkit-text-fill-color:var(--ink);-webkit-box-shadow:0 0 0 1000px var(--bg) inset}
 input,select,textarea{background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:7px 8px;font-size:13px;width:100%}
 
 .drop{border:2px dashed var(--line);border-radius:var(--r);padding:28px 16px;text-align:center;color:var(--dim);cursor:pointer;background:var(--bg2)}
@@ -48,18 +49,20 @@ input,select,textarea{background:var(--bg);border:1px solid var(--line);color:va
 .list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .it{border-bottom:1px solid var(--line);background:var(--bg2)}
 .it:last-child{border-bottom:none}
-.head{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;cursor:pointer;gap:12px;align-items:center;padding:8px 12px;width:100%;text-align:left;background:none;border:none;color:inherit}
+.head{display:grid;grid-template-columns:28px 54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;cursor:pointer;gap:12px;align-items:center;padding:8px 12px;width:100%;text-align:left;background:none;border:none;color:inherit}
 .head:hover{background:var(--bg3)}
 .head img{width:54px;height:72px;object-fit:cover;object-position:top;border-radius:2px;background:#fff}
 .head .who b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head .who span,.head .col span{display:block;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .head .col{font-size:13px}
+.sel{display:flex;align-items:center;cursor:pointer}
+.sel input{width:17px;height:17px;accent-color:var(--teal);margin:0}
 .akt{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--dim);cursor:pointer}
 .akt input{width:16px;height:16px;accent-color:var(--lime);margin:0}
 .head .car{color:var(--dim);transition:transform .15s}
 .it.open .car{transform:rotate(90deg)}
-.lh{display:grid;grid-template-columns:54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;gap:12px;padding:6px 12px;font-size:12px;color:var(--dim);background:var(--bg3);border-bottom:1px solid var(--line)}
-@media (max-width:900px){.head{grid-template-columns:44px 1fr auto;}.head img{width:44px;height:58px}.head .col,.head .car,.lh{display:none}.head .stat{grid-column:2/4}}
+.lh{display:grid;grid-template-columns:28px 54px minmax(0,2.2fr) minmax(0,1.4fr) 110px 130px 78px 170px 24px;gap:12px;padding:6px 12px;font-size:12px;color:var(--dim);background:var(--bg3);border-bottom:1px solid var(--line)}
+@media (max-width:900px){.head{grid-template-columns:26px 44px 1fr auto;}.head img{width:44px;height:58px}.head .col,.head .car,.lh{display:none}.head .stat{grid-column:2/4}}
 .tag{font-family:'Space Mono',monospace;font-size:11px;padding:2px 7px;border-radius:3px;border:1px solid var(--line);color:var(--dim);white-space:nowrap;display:inline-block}
 .tag.ok{color:var(--ok);border-color:#2f6b49}.tag.bad{color:var(--bad);border-color:#7a3530}.tag.warn{color:var(--warn);border-color:#7a5d24}
 .stat small{display:block;font-size:11px;color:var(--dim);margin-top:2px}
@@ -143,11 +146,12 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
   <div id="queue" class="hint"></div>
 
   <div class="tools">
-    <input type="search" id="q" placeholder="Søg navn, cert.-nr., arbejdsgiver">
+    <input type="search" id="q" name="cert-filter" placeholder="Søg navn, cert.-nr., arbejdsgiver" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" data-form-type="other" data-1p-ignore>
     <div class="chips" id="chips"></div>
     <span class="sp" style="margin-left:auto"></span>
     <button class="btn" id="btnAiAll">Aflæs alle</button>
     <button class="btn" id="btnSignAll">Underskriv forfaldne (§9.2)</button>
+    <button class="btn del" id="btnDelSel" disabled>Slet valgte</button>
     <button class="btn" id="btnPrintAll">Udskriv rapporter</button>
     <button class="btn" id="btnCsv">Eksportér liste (CSV)</button>
     <button class="btn" id="btnBackup">Backup</button>
@@ -163,9 +167,9 @@ footer{max-width:1400px;margin:0 auto;padding:6px 16px 30px;color:var(--dim);fon
 <dialog id="dlgSet">
   <div class="row" style="justify-content:space-between;align-items:flex-start"><h2 style="flex:1">Indstillinger</h2>
     <button class="btn sm" id="btnSetClose" aria-label="Luk" title="Luk uden at gemme" style="font-size:16px;line-height:1;padding:4px 10px">✕</button></div>
-  <label>Dit navn (bruges ved underskrift og på rapporter)<input id="setChecker"></label>
-  <label>Stilling<input id="setTitle" placeholder="fx svejsekoordinator"></label>
-  <label>Firma<input id="setCompany"></label>
+  <label>Dit navn (bruges ved underskrift og på rapporter)<input id="setChecker" autocomplete="off" data-lpignore="true" data-1p-ignore></label>
+  <label>Stilling<input id="setTitle" placeholder="fx svejsekoordinator" autocomplete="off" data-lpignore="true" data-1p-ignore></label>
+  <label>Firma<input id="setCompany" autocomplete="off" data-lpignore="true" data-1p-ignore></label>
   <label>Din underskrift (billede, PNG eller JPG med hvid/gennemsigtig baggrund)<input type="file" id="setSignFile" accept="image/*"></label>
   <div class="row" id="signPrev" style="margin:-4px 0 10px"></div>
   <label>Aflæsning af certifikater<select id="setReader"><option value="free">Gratis tekstgenkendelse i browseren (standard)</option><option value="ai">Claude (kræver egen API-nøgle)</option></select></label>
@@ -250,7 +254,7 @@ const norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9æøåäöüșțăâîéè�
 function cnpCheck(v){v=(v||'').replace(/\s/g,'');if(!/^[1-8]\d{12}$/.test(v))return null;const k='279146358279';let s=0;for(let i=0;i<12;i++)s+=+v[i]*+k[i];let c=s%11;if(c===10)c=1;const cent={1:1900,2:1900,3:1800,4:1800,5:2000,6:2000,7:1900,8:1900}[v[0]];return{valid:c===+v[12],dob:`${cent+ +v.slice(1,3)}-${v.slice(3,5)}-${v.slice(5,7)}`}}
 
 /* ================= state ================= */
-let ITEMS=[];let FILTER='all';const OPEN=new Set();
+let ITEMS=[];let FILTER='all';const OPEN=new Set(),SEL=new Set();
 function newItem(file,hash){return{id:'c'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),added:new Date().toISOString(),file:{name:file.name,size:file.size,type:file.type,hash},thumb:'',pages:0,meta:null,images:[],hasText:false,metaFlags:[],f:{},active:true,conf:[],reval:[],tests:{},supp:'',spec:{},notes:'',ai:{status:'none',anomalies:[],error:''},ocr:{status:'none',text:''},cmp:{},lang:'da'}}
 
 /* ================= PDF/billede ================= */
@@ -834,7 +838,8 @@ function renderList(){
   const shown=ev.filter(({it,v})=>matches(it,v,q)).sort((a,b)=>ORDER[a.v.cls]-ORDER[b.v.cls]||(a.it.f.name||a.it.file.name).localeCompare(b.it.f.name||b.it.file.name));
   const L=$('list');
   if(!ITEMS.length){L.innerHTML='<div class="empty">Listen er tom. Træk certifikater ind i feltet ovenfor.</div>';return}
-  L.innerHTML=`<div class="lh"><span></span><span>Svejser og certifikat</span><span>Udsteder og arbejdsgiver</span><span>Gyldig til</span><span>Næste underskrift</span><span>Aktiv</span><span>Resultat</span><span></span></div>`+(shown.length?'':'<div class="empty">Ingen certifikater matcher søgningen.</div>');
+  L.innerHTML=`<div class="lh"><span></span><span></span><span>Svejser og certifikat</span><span>Udsteder og arbejdsgiver</span><span>Gyldig til</span><span>Næste underskrift</span><span>Aktiv</span><span>Resultat</span><span></span></div>`+(shown.length?'':'<div class="empty">Ingen certifikater matcher søgningen.</div>');
+  delBtn();
   shown.forEach(({it})=>{const a=document.createElement('article');a.className='it'+(OPEN.has(it.id)?' open':'');a.id='it_'+it.id;L.appendChild(a);renderItem(it)});
   autoCompare();
 }
@@ -851,7 +856,8 @@ function matches(it,v,q){
 function visibleItems(){const q=norm($('q').value);return ITEMS.filter(it=>matches(it,evaluate(it),q))}
 function headHTML(it,v){
   const s=v.sig;
-  return `<img src="${it.thumb}" alt="">
+  return `<label class="sel" title="Markér"><input type="checkbox" data-sel ${SEL.has(it.id)?'checked':''}></label>
+  <img src="${it.thumb}" alt="">
   <div class="who"><b>${esc(it.f.name||it.file.name)}</b><span class="mono">${esc(it.f.certNo||'Cert.-nr. mangler')}${it.f.name?' · '+esc(it.file.name):''}</span></div>
   <div class="col">${esc(it.f.issuer||'')}<span>${esc(it.f.employer||'')}</span></div>
   <div class="col mono">${s.end?fmt(s.end):'–'}</div>
@@ -864,10 +870,21 @@ function renderHead(it){const a=$('it_'+it.id);if(!a)return;const h=a.querySelec
 function bindHead(it,a){
   const h=a.querySelector('.head');
   const toggle=()=>{if(OPEN.has(it.id))OPEN.delete(it.id);else OPEN.add(it.id);a.classList.toggle('open');renderItem(it)};
-  h.onclick=e=>{if(e.target.closest('[data-act]')||e.target.closest('.akt'))return;toggle()};
+  h.onclick=e=>{if(e.target.closest('.akt')||e.target.closest('.sel'))return;toggle()};
   h.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}};
   const cb=h.querySelector('[data-act]');
-  if(cb)cb.onchange=e=>{it.active=e.target.checked;save(it);renderList()};}
+  if(cb)cb.onchange=e=>{it.active=e.target.checked;save(it);renderList()};
+  const sb=h.querySelector('[data-sel]');
+  if(sb)sb.onchange=e=>{e.target.checked?SEL.add(it.id):SEL.delete(it.id);delBtn()};}
+function delBtn(){const n=[...SEL].filter(id=>ITEMS.some(i=>i.id===id)).length;
+  $('btnDelSel').disabled=!n;$('btnDelSel').textContent=n?`Slet valgte (${n})`:'Slet valgte'}
+async function removeItem(it){await dbDel(it.id);docCache.delete(it.id);ITEMS=ITEMS.filter(x=>x!==it);
+  ITEMS.forEach(o=>{if(o.cmp[it.id]){delete o.cmp[it.id];save(o)}});OPEN.delete(it.id);SEL.delete(it.id)}
+$('btnDelSel').onclick=async()=>{
+  const list=ITEMS.filter(i=>SEL.has(i.id));if(!list.length)return;
+  if(!confirm(`Slet ${list.length} ${list.length===1?'certifikat':'certifikater'} fra listen? Det kan ikke fortrydes.`))return;
+  for(const it of list)await removeItem(it);
+  renderList();toast(`${list.length} slettet.`)};
 function renderItem(it){
   const a=$('it_'+it.id);if(!a)return;const v=evaluate(it);
   a.innerHTML=`<div class="head" role="button" tabindex="0" aria-expanded="${OPEN.has(it.id)}">${headHTML(it,v)}</div>`;
@@ -903,7 +920,7 @@ function bodyEl(it){
       ${it.ocr&&it.ocr.status==='done'&&it.ai.status!=='done'?'<p class="hint">Udfyldt med den gratis tekstgenkendelse. Kontrollér værdierne mod certifikatet. Håndskrift kan ikke læses, så 6-måneders underskrifter skal indtastes.</p>':''}
       ${it.ai.status==='error'?`<div class="al bad" style="margin:8px 0">AI-aflæsningen fejlede: ${esc(it.ai.error)}</div>`:''}
       ${it.ai.status==='done'?'<p class="hint">Aflæst med AI. Kontrollér værdierne mod certifikatet, især håndskrevne datoer.</p>':''}
-      <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}"></label>`).join('')}</div>
+      <div class="fields" style="margin-top:8px">${FIELDS.map(([k,l,t,c])=>t==='select'?`<label class="${c||''}">${l}<select data-f="${k}"><option value="">Vælg</option><option value="a">a) ny prøve hvert 3. år</option><option value="b">b) verifikation hvert 2. år</option><option value="c">c) løbende</option></select></label>`:`<label class="${c||''}">${l}<input data-f="${k}" type="${t==='date'?'date':'text'}" autocomplete="off" data-lpignore="true" data-1p-ignore></label>`).join('')}</div>
     </div>
     <div class="box"><h3>Prøvning (ISO 9606-1, afsnit 6.4)</h3>
       <p class="hint" style="margin-top:0">Sømtype, proces, tykkelse, diameter og FM-gruppe læses fra betegnelsen. Skriv kun her, hvis de skal rettes.</p>
@@ -981,7 +998,7 @@ function bodyEl(it){
   q('[data-ocr]').onclick=()=>{if(it.ocr&&it.ocr.status==='done'&&!confirm('Læs teksten igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;ocrQueue(it.id)};
   if(q('[data-ai]'))q('[data-ai]').onclick=()=>{if(it.ai.status==='done'&&!confirm('Aflæs igen? Tomme felter udfyldes, felter du har rettet, bevares.'))return;aiQueue(it.id)};
   q('[data-cmpgo]').onclick=async()=>{const o=ITEMS.find(x=>x.id===q('[data-cmpsel]').value);if(!o)return;q('[data-crops]').innerHTML='<p class="hint">Sammenligner …</p>';await new Promise(r=>setTimeout(r,20));try{await compare(it,o)}catch(e){toast('Sammenligningen fejlede: '+e.message)}renderList()};
-  q('[data-delete]').onclick=async()=>{if(!confirm('Fjern certifikatet fra listen?'))return;await dbDel(it.id);docCache.delete(it.id);ITEMS=ITEMS.filter(x=>x!==it);ITEMS.forEach(o=>{if(o.cmp[it.id]){delete o.cmp[it.id];save(o)}});OPEN.delete(it.id);renderList()};
+  q('[data-delete]').onclick=async()=>{if(!confirm('Fjern certifikatet fra listen?'))return;await removeItem(it);renderList()};
   return d;
 }
 /* ================= udskrift og eksport ================= */
